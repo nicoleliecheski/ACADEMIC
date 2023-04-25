@@ -1,1 +1,36 @@
-TEST
+#include <stdio.h>
+#include <stdlib.h>
+
+int main() {
+    int n1;
+    int n2;
+    int n3;
+    int r;
+    printf("Escreva o dígito da centena: ");
+    scanf("%d", &n1);
+    if (n1 > 9) {
+        printf("Dígito Inválido!\n");
+        exit(0);
+    }
+
+    printf("Escreva o dígito da dezena: ");
+    scanf("%d", &n2);
+    if (n2 > 9) {
+        printf("Dígito Inválido!\n");
+        exit(0);
+    }
+
+    printf("Escreva o dígito da unidade: ");
+    scanf("%d", &n3);
+    if (n3 > 9) {
+        printf("Dígito Inválido!\n");
+        exit(0);
+    }
+
+    r = (n1*100)+(n2*10)+n3;
+
+    printf("Resultado: %d", r);
+    printf("\nResultado ao quadrado: %d\n", r*r);
+
+    return 0;
+}
