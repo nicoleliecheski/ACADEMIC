@@ -1,36 +1,16 @@
 #include <stdio.h>
-#include <stdlib.h>
 
 int main() {
-    int n1;
-    int n2;
-    int n3;
-    int r;
-    printf("Escreva o dígito da centena: ");
-    scanf("%d", &n1);
-    if (n1 > 9) {
-        printf("Dígito Inválido!\n");
-        exit(0);
-    }
+    int n1, n2, n3, res; //declaração das variáveis
+    //este progama foi feito pela aluna: Nicole Liecheski
+    //na data 27/04/2022
 
-    printf("Escreva o dígito da dezena: ");
-    scanf("%d", &n2);
-    if (n2 > 9) {
-        printf("Dígito Inválido!\n");
-        exit(0);
-    }
+    //Escreva o dígito da centena, da dezena e da unidade;
 
-    printf("Escreva o dígito da unidade: ");
-    scanf("%d", &n3);
-    if (n3 > 9) {
-        printf("Dígito Inválido!\n");
-        exit(0);
-    }
-
-    r = (n1*100)+(n2*10)+n3;
-
-    printf("Resultado: %d", r);
-    printf("\nResultado ao quadrado: %d\n", r*r);
-
-    return 0;
+    scanf("%d %d %d", &n1, &n2, &n3);
+    if((n1<10)&&(n1>=0)&&(n2<10)&&(n2>=0)&&(n3<10)&&(n3>=0))
+        {   res = n1*100 + n2*10 + n3;
+            printf("%d, %d\n", res, res*res);
+    }else printf("DIGITO INVALIDO\n");
+return 0;
 }
