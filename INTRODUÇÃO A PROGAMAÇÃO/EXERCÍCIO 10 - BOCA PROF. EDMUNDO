@@ -1,0 +1,13 @@
+#include <stdio.h>
+
+int main() {
+    float num; //declaração das variáveis
+    //este progama foi feito pela aluna: Nicole Liecheski
+    //na data 27/04/2022
+
+    //Escreva o valor a ser arredondado.
+
+    scanf("%f", &num);
+    printf("%f\n%f\n%f\n", (num*10+0.5)/10, (num*100+0.5)/100, (num*1000+0.5)/1000);
+return 0;
+} 
