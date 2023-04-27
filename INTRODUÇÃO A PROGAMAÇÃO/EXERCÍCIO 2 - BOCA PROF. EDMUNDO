@@ -1,0 +1,15 @@
+#include <stdio.h>
+
+int main() {
+    float s, watts; //declaração das variáveis
+    //este progama foi feito pela aluna: Nicole Liecheski
+    //na data 27/04/2022
+
+    //Escreva o valor do salário mínimo e a quantidade de kW gasta pela residência.
+
+    scanf("%f %f", &s, &watts);
+    printf("Custo por kW: R$ %f\n", 0.007*s);
+    printf("Custo do consumo: R$ %f\n", 0.007*s*watts);
+    printf("Custo com desconto: R$ %f\n", 0.007*s*watts*0.9);
+return 0;
+} 
