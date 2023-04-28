@@ -1,0 +1,15 @@
+#include <stdio.h>
+
+int main() {
+    float h, aresta; //declaração das variáveis
+    //este programa foi feito pela aluna: Nicole Liecheski
+    //na data 27/04/2022
+
+    //Escreva o valor da altura e da aresta do hexágono.
+
+    scanf("%f\t%f", &h, &aresta);
+    res = (a+b)/2.000;
+    printf("%.3f\n", res);
+
+return 0;
+} 
