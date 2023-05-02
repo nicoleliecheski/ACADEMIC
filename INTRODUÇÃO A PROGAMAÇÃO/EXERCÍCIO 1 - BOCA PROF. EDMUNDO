@@ -1,16 +1,14 @@
 #include <stdio.h>
 
 int main() {
-    int n1, n2, n3, res; //declaração das variáveis
-    //este progama foi feito pela aluna: Nicole Liecheski
-    //na data 27/04/2022
+    int idade; //declaração das variáveis
+    //este programa foi feito pela aluna: Nicole Liecheski
+    //na data 02/05/2023
 
-    //Escreva o dígito da centena, da dezena e da unidade;
+    //Escreva o valor da idade da pessoa.
 
-    scanf("%d %d %d", &n1, &n2, &n3);
-    if((n1<10)&&(n1>=0)&&(n2<10)&&(n2>=0)&&(n3<10)&&(n3>=0))
-        {   res = n1*100 + n2*10 + n3;
-            printf("%d, %d\n", res, res*res);
-    }else printf("DIGITO INVALIDO\n");
+    scanf("\n%d", &idade);
+    printf("O CORACAO BATEU %.2f VEZES\n", idade*365.25*24*60*60);
+
 return 0;
-}
+} 
