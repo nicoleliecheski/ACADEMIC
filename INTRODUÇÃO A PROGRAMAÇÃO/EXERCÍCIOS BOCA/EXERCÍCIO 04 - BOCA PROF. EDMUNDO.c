@@ -3,7 +3,7 @@
 int main() {
     float raio, alt, valor; //declaração das variáveis
     //este programa foi feito pela aluna: Nicole Liecheski
-    //na data 27/04/2022
+    //na data 27/04/2023
 
     //Escreva o valor do raio e da altura da lata.
 
