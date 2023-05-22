@@ -4,7 +4,7 @@ int main() {
     int a, b; 
     float res;//declaração das variáveis
     //este programa foi feito pela aluna: Nicole Liecheski
-    //na data 27/04/2022
+    //na data 27/04/2023
 
     //Escreva o valor dos coenficientes A, B e C.
 
