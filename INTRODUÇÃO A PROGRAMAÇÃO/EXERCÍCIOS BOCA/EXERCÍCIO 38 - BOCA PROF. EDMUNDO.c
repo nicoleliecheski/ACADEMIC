@@ -1,19 +1,20 @@
 #include <stdio.h>
 
 int main() {
-    float en[4], sa[4]; //declaração das variáveis
+    float en[4], sa[4];
+    int n, p, i, v;//declaração das variáveis
     //este programa foi feito pela aluna: Nicole Liecheski
     //na data 22/05/2023
 
    //Escreva 4 números reais.
 
-    for(int i = 0; i < 4; ++i){
-        sa[i] = 0.00;
+    for(v = 0; v < 4; ++v){
+        sa[v] = 0.00;
     }
 
     scanf("%f\n%f\n%f\n%f", &en[0], &en[1], &en[2], &en[3]);
-    for(int i = 0; i < 4; ++i){
-        for(int n = 0; n < 4; ++n){
+    for(i = 0; i < 4; ++i){
+        for(n = 0; n < 4; ++n){
             if(en[i]>=sa[n]){
                 sa[n+3] = sa[n+2];
                 sa[n+2] = sa[n+1];
@@ -24,8 +25,8 @@ int main() {
         }
     }
 
-    for(int i = 3; i > 0; --i){
-        printf("%.2f, ", sa[i]);
+    for(p = 3; p > 0; --p){
+        printf("%.2f, ", sa[p]);
     }
     printf("%.2f", sa[0]);
     
