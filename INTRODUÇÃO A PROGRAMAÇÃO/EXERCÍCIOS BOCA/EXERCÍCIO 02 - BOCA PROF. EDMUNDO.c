@@ -3,7 +3,7 @@
 int main() {
     float s, watts; //declaração das variáveis
     //este progama foi feito pela aluna: Nicole Liecheski
-    //na data 27/04/2022
+    //na data 27/04/2023
 
     //Escreva o valor do salário mínimo e a quantidade de kW gasta pela residência.
 
