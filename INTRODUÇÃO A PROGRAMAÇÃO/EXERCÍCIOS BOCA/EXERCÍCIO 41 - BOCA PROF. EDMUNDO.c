@@ -2,7 +2,7 @@
 
 int main() {
 
-    int V[100000], B[1000], N, M,  v, p, i, g, h, w, achei;//declaração das variáveis
+    int V[100000], B[1000], N, M, i, h, achei;//declaração das variáveis
     //este programa foi feito pela aluna: Nicole Liecheski
     //na data 22/05/2023
 
@@ -16,33 +16,40 @@ int main() {
 
     scanf("%d", &N);
 
-    for(v = 0; v < N; ++v){
-        V[v] = 0;
+    for(i = 0; i < N; ++i){
+        V[i] = 0;
     }
-    for(w = 0; w < M; ++w){
-        B[w] = 0;
-    }
+    i=0;
 
-    for(p = 0; p < N; ++p){
-        scanf("%d ", &V[p]);
+    for(i = 0; i < M; ++i){
+        B[i] = 0;
     }
+    i=0;
+
+    for(i = 0; i < N; ++i){
+        scanf("%d ", &V[i]);
+    }
+    i=0;
 
     scanf("%d", &M);
 
     for(i = 0; i < M; ++i){
         scanf("%d", &B[i]);
     }
+    i=0;
 
-    for(g = 0; g < M; ++g){
-        while (h < N && !achei) {
-            if (V[h] == B[g]) {
-                achei = 1;
-            } else {
+    for(i = 0; i < M; ++i){
+        h = 0;
+        while ((h < N)&&(achei == 0)) {
+            if (V[h] != B[i]) {
                 h++;
+            } else {
+                achei = 1;
             }
         }
-        if (achei==1) {
+        if (achei!=0) {
             printf ("ACHEI\n");
+            achei = 0;
         } else {
             printf ("NAO ACHEI\n");
         }
