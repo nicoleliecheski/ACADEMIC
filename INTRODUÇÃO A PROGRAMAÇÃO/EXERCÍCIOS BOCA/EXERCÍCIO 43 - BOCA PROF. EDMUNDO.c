@@ -18,8 +18,13 @@ int main() {
         V[i] = 0;
     }
 
-    for(i = 0; i < N; ++i){
-        scanf("%d ", &V[i]);
+    for(i = 0; i < N; i++){
+        if(i<N-1){
+            scanf("%d ", &V[i]);
+        }
+        else{
+            scanf("%d", &V[i]);
+        }
     }
 
     res = 0;
