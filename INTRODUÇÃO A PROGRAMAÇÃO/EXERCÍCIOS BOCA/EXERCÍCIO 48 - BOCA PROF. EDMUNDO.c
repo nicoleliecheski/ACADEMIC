@@ -38,7 +38,7 @@ int main() {
             printf("(%d) %d\n", c, cont);
             cont = 0;
         }
-        scanf("%d\n", &N);
+        scanf("%d", &N);
     }
 
     return 0;
