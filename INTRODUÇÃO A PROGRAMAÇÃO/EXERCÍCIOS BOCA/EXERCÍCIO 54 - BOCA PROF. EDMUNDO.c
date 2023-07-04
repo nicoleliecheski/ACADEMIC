@@ -3,8 +3,8 @@
 int main() {
 
     int N, i, min, j, aux;
-    float mediana;
-    long int V[106], swap; //declaração das variáveis
+    double mediana;
+    long int V[100000]; //declaração das variáveis
     //este programa foi feito pela aluna: Nicole Liecheski
     //na data 27/06/2023
 
@@ -30,19 +30,15 @@ int main() {
             }
         }
     }
-
-    /*for(i = 0; i < N; i++){
-        printf("%ld ", V[i]);
-    }*/
-
+    
     if((N%2) != 0){
         mediana = V[N/2];
-        printf("%.2f\n", mediana);
     } else{
         mediana = (V[N/2]+V[N/2-1])/2.00;
-        printf("%.2f\n", mediana);
     }
-
+    
+    printf("%.2lf\n", mediana);
+    
     return 0;
 }
 
