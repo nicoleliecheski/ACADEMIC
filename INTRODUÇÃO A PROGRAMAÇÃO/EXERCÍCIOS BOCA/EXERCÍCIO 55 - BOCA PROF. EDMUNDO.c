@@ -2,7 +2,7 @@
 
 int main() {
 
-    int T, N, i, V[1000], j, c, d, menor = 9999; //declaração das variáveis
+    int T, N[10], i, V[1000], j, c, d, menor[10]; //declaração das variáveis
     //este programa foi feito pela aluna: Nicole Liecheski
     //na data 03/07/2023
 
@@ -15,27 +15,31 @@ int main() {
     scanf("%d", &T);
 
     for(i = 0; i < T; i++){
-        scanf("%d", &N);
-        for(j = 0; j < N; j++){
-            if(j < N-1){
+        menor[i] = 9999;
+        scanf("%d", &N[i]);
+        for(j = 0; j < N[i]; j++){
+            if(j < N[i]-1){
                 scanf("%d ", &V[j]);
             } else{
-                scanf("%d", &V[i]);
+                scanf("%d", &V[j]);
             }
         }
-        for(j = 0; j < N-1; j++){
-            for(c = j+1; c < N; c++){
+        for(j = 0; j < N[i]-1; j++){
+            for(c = j+1; c < N[i]; c++){
                 d = V[j] - V[c];
                 if(d < 0){
                     d = -d;
                 }
-                if(menor > d){
-                    menor = d;
+                if(d < menor[i]){
+                    menor[i] = d;
                 }
             }
         }
-        printf("%d %d\n", menor, N*N);
     }
-  
+    
+    for(i = 0; i < T; i++){
+        printf("%d %d\n", menor[i], N[i]*N[i]);
+    }
+    
     return 0;
 }
