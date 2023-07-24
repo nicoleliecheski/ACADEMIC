@@ -18,12 +18,14 @@ int main()
     for(i = 0; i < T; i++){
         for(j = 0; j < 11; j++){
             if(j < 10){
-                scanf("%d ", &dig[i]);
+                scanf("%d ", &dig[j]);
             } else{
-                scanf("%d", &dig[i]);
+                scanf("%d", &dig[j]);
             }
         }
+        soma = 0;
         for(j = 0; j < 9; j++){
+            //printf("%d = %d + %d*%d\n", soma, soma, dig[j], j+1);
             soma = soma + dig[j]*(j+1);
         }
         if((soma%11) == 10){
@@ -45,7 +47,7 @@ int main()
             d2 = soma%11;
         }
         
-        printf("\nd1 = %d d2 = %d\n", d1, d2);
+        //printf("\nd1 = %d d2 = %d\n", d1, d2);
         
         if((d1 != dig[9])||(d2 != dig[10])){
             val[i] = 1;
