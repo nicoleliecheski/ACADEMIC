@@ -2,24 +2,36 @@
 #include <math.h>
 
 int main(){
-    int A, b;
-    double ans, a;
+    int A, b, ans;
+    double a;
 
     scanf("%d", &A);
 
-    a = ceil((A-1986)/76.00);
-    b = a;
+    a = (A-1986)/76.00;
+    b = ceil(a);
     
     //printf("%lf %d\n", a, b);
     
     
-    if(b%76 == 0){
+    if((a == 1) || (a == -1) || (a == 0)){
+        //printf("//\n");
         ans = A + 76;
     } else{
         ans = 1986 + 76 * b;
     }
+    
+    if(ans%4 == 0){
+        if(ans%100 == 0){
+            if(ans%400 == 0){
+                ans -= 1;
+            }
+        } else{
+            ans -= 1;
+        }
+        
+    }
 
-    printf("%.0lf\n", ans);
+    printf("%d\n", ans);
 
     return 0;
 }
