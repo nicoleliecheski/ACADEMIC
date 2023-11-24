@@ -1,27 +1,24 @@
 #include <bits/stdc++.h>
 using namespace std;
 
-const long long T = 1e5;
+const long long T = 1e4+50;
 string S;
-int DP[55][55], A[55], B[55], N, X, i;
-long long mod = 1e9+7;
+int DP[55][T], A[55], B[55], N, X, i;
 
-int PD(int i, int qt, int C){ 
-    if(i == N) return 0;
-    if(qt > B[i]) PD(i+1, 1, C);
-    if(DP[i][qt] != -1) return DP[i][qt];
+int PD(int p, int K){
+    if(K == 0) return 1;
+    if(p == N) return 0;
 
-    C += A[i+1]*qt;
-
-    long long ans = 0;
-
-    cout << C << "\n";
-
-    if(C == X) return 1;
-    if(C < X) ans += PD(i, qt+1, A[i]);
-    if(C > X) return 0;
-
-    return DP[i][qt] = ans;
+    int &ans = DP[p][K];
+    if(ans != -1) return ans;
+    ans = 0;
+    for (int i = 0; i <= B[p]; i++)
+    {   
+        if(K < A[p]*i) break;
+        ans |= PD(p+1, K - A[p]*i);
+    }
+    
+    return ans;
 }
 
 int main(){
@@ -34,7 +31,7 @@ int main(){
         cin >> A[i] >> B[i];
     }
 
-    if(PD(0, 1, 0)) cout << "Yes\n";
+    if(PD(0, X)) cout << "Yes\n";
     else cout << "No\n";
 
     return 0;
