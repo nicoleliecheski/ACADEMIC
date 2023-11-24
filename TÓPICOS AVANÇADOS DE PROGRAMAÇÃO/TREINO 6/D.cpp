@@ -3,45 +3,20 @@ using namespace std;
 
 const long long T = 2*1e5;
 long long N, K, A[T], B[T];
-long long DP[T];
+int DP[T][2];
 
-long long PD(int Xi){
-    long long ans = 0;
-    if(Xi == 0){
-        if(abs(A[Xi]-A[Xi+1]) <= K){
-            cout << "/AA\n";
-            DP[Xi] = A[Xi];
-            ans = 1;
-        } else if(abs(A[Xi]-B[Xi+1]) <= K){
-            cout << "/AB\n";
-            DP[Xi] = A[Xi];
-            ans = 1;
-        } else if(abs(B[Xi]-B[Xi+1]) <= K){
-            cout << "/BB\n";
-            DP[Xi] = A[Xi];
-            ans = 1;
-        } else if(abs(B[Xi]-A[Xi+1]) <= K){
-            cout << "/BA\n";
-            DP[Xi] = A[Xi];
-            ans = 1;
-        }
+int PD(int Xi, bool ant){ // 0 = A - 1 = B
+    if(Xi == N) return 1;
+    if(DP[Xi][ant] != -1) return DP[Xi][ant];
+    DP[Xi][ant] = 0;
+    if(ant == 0){
+        if(abs(A[Xi] - A[Xi-1]) <= K) DP[Xi][ant] |= PD(Xi+1, 0);
+        if(abs(B[Xi] - A[Xi-1]) <= K) DP[Xi][ant] |= PD(Xi+1, 1);
+    } else{
+        if(abs(A[Xi] - B[Xi-1]) <= K) DP[Xi][ant] |= PD(Xi+1, 0);
+        if(abs(B[Xi] - B[Xi-1]) <= K) DP[Xi][ant] |= PD(Xi+1, 1);
     }
-
-    cout << DP[Xi] << "\n";
-
-    if(abs(DP[Xi]-A[Xi+1]) <= K){
-        cout << "/A1\n";
-        DP[Xi+1] = A[Xi+1];
-        ans = 1;
-    } else if(abs(DP[Xi]-B[Xi+1]) <= K){
-        cout << "/B1\n";
-        DP[Xi+1] = B[Xi+1];
-        ans = 1;
-    }
-
-    if(ans == 0) return 0;
-    if(Xi < N) ans = PD(Xi+1);
-    return ans;
+    return DP[Xi][ant];
 }
 
 int main(){
@@ -59,7 +34,8 @@ int main(){
         cin >> B[i]; 
     }
 
-    if(PD(0)) cout << "Yes\n";
+    //cout << PD(1, 0) << " " << PD(1, 1) << "\n";
+    if(PD(1, 0)|PD(1, 1)) cout << "Yes\n";
     else cout << "No\n";
 
     return 0;
