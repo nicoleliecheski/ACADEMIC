@@ -35,6 +35,6 @@ int main(){
     
 
     cout << solve(1) << "\n";
-
+    cout << "meu amigo Rafael eh muinto lindo ave maria uwu";
     return 0;
 }
