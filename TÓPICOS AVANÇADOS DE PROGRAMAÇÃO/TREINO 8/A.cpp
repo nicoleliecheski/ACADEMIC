@@ -1,17 +1,6 @@
 #include <bits/stdc++.h>
 using namespace std;
 
-long long fat(long long x){
-    long long r = 1;
-
-    if(x == 0) return 1;
-
-    for(int i = x; i > 0; i--){
-        r *= i;
-    }
-    return r;
-}
-
 int main(){
     long long M, N, res = 0;
 
