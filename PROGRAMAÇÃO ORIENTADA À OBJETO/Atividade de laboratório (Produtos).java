@@ -3,11 +3,11 @@ public class Main
 	
 	public class Produto
     {
-        int codigo;
-        String nome;
-        int quantidade;
-        String tipo;
-        float valor;
+        private int codigo;
+        private String nome;
+        private int quantidade;
+        private String tipo;
+        private float valor;
         
         public Produto(int x)
         {
@@ -47,10 +47,11 @@ public class Main
     }
     
 	public static void main(String[] args) {
-		Produto my1 = new Produto(001);
-		Produto my2 = new Produto(002, "pera");
-		Produto my3 = new Produto(003, "banana", 5);
-		Produto my4 = new Produto(004, "caju", 7, "fruta", 5.50f);
+	    Main main = new Main();
+		Main.Produto my1 = main.new Produto(1);
+		Main.Produto my2 = main.new Produto(2, "pera");
+		Main.Produto my3 = main.new Produto(3, "banana", 5);
+		Main.Produto my4 = main.new Produto(4, "caju", 7, "fruta", 5.50f);
 		System.out.println(my1.codigo + " " + my1.nome + " " + my1.quantidade + " " + my1.tipo + " " + my1.valor);
 		System.out.println(my2.codigo + " " + my2.nome + " " + my2.quantidade + " " + my2.tipo + " " + my2.valor);
 		System.out.println(my3.codigo + " " + my3.nome + " " + my3.quantidade + " " + my3.tipo + " " + my3.valor);
