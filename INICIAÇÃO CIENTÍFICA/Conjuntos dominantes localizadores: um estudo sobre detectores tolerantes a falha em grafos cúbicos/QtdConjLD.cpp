@@ -34,7 +34,7 @@ int main(int argc, char *argv[]) {
   int n = graphsize(s);
   int m = graph_row_words(n);
 
-  // Calcula todos os subconjuntos S possíveis de G
+  // Calcula todos os subconjuntos de vertices S possíveis de G
   set< set<int> > res = subsets(n);
   
   vector<unsigned long> g((size_t)n * m);
