@@ -1,6 +1,9 @@
 // Programa que calcula a quantidade de conjuntos LD (Localizadores Dominantes) possiveis de um grafo G qualquer
-// Utiliza funcoes dos cabecalhos personalizados "subset.h" e "showg.h"
+// O grafos esta armazenado em arquivo do tipo .g6
+// Quando ha mais de um grafo em um arquivo ele interage apenas com o primeiro
+// Utiliza funcoes dos cabecalhos personalizados "subset.h" e "graphio.h"
 // Para compilar utilize o comando "g++ -o QtdConjLD QtdConjLD.cpp subset.cpp graphio.c"
+// Para executar utilize o comando "./QtdConjLD <nome do arquivo>.g6"
 
 #include <iostream>
 #include <vector>
