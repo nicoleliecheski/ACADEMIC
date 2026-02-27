@@ -1,4 +1,4 @@
-// Cabecalho personalizado para que as funcoes do arquivo subset.cpp possam ser utilizadas em outros arquivos
+// Cabecalho personalizado para que as funcoes do arquivo "subset.cpp" possam ser utilizadas em outros arquivos
 
 #include <set>
 using namespace std;
