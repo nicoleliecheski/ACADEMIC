@@ -1,4 +1,8 @@
-// Programa que calcula a quantidade de conjuntos RED-OLD (Redudantes Abertos Localizadores Dominantes) possiveis de varios grafos G quaisquer
+/* 
+Programa que dado varios grafos cubicos, calcula a quantidade de grafos com
+conjuntos RED-OLD (Redudantes Abertos Localizadores Dominantes) possiveis
+e registra a RED-OLD(G) de cada
+*/
 // Os grafos estao armazenados em arquivos do tipo .g6
 // Utiliza funcoes dos cabecalhos personalizados "subset.h" e "graphio.h"
 // Para compilar utilize o comando "g++ -o Conjuntos_RED_OLD Conjuntos_RED_OLD.cpp subset.cpp graphio.c"
@@ -11,6 +15,7 @@
 #include <stdio.h>
 #include <utility>
 #include <vector>
+#include <climits>
 
 using namespace std;
 
@@ -57,12 +62,14 @@ int main(int argc, char *argv[]) {
   cin >> g5;
 
   char *s;
+  // Indice do grafo atual
   int graph_num = 0;
   // Loop para pegar todos os grafos no arquivo .g6
   while ((s = showg_getline(f)) != NULL) { 
     // Quantidade de conjuntos RED-OLD que o grafo atual possui
     int Qtd_RED_OLDs = 0;
-    // Indice do grafo atual
+    // Cardinalidade minima de um subconjunto RED-OLD em G
+    int RED_OLD_G = INT_MAX;
     graph_num++;
 
     // Otimizando: o n eh sempre igual nos arquivos
@@ -81,7 +88,7 @@ int main(int argc, char *argv[]) {
     int m = graph_row_words(n);
     vector<unsigned long> g((size_t)n * m);
     stringtograph(s, g.data(), m);
-
+    
     // Gerando a vizinhanca de cada vertice
     vector<set<int> > vizinhancas;
     for (int i = 0; i < n; i++) {
@@ -93,18 +100,24 @@ int main(int argc, char *argv[]) {
     set<set<int> > conjuntos_S = subsets(n); 
 
     // Loop passando por cada conjunto S
-    for (auto &S : conjuntos_S) {        
-      
+    for (auto &S : conjuntos_S) {  
+      int tamanho_de_S = S.size();   
+
       // Otimizando: se o conjunto atual eh vazio passa pro proximo conjunto
       if(S.empty()) continue; 
-
+      
+      // Otimizando: Estamos a procura de valores possiveis de RED-OLD(G), logo se o S atual eh maior que isso, ja nao vale a pena testa-lo
+      if(tamanho_de_S >= RED_OLD_G) continue;
+      
       // Otimizando: os limites de RED-OLD(G) sao (2/3)*n <= RED-OLD(G) <= n
-      if(((2/3) * n) > S.size()) continue; 
-
-      // Otimizando: se o grafo possui cintura[g(G)] >= 5, entao o conjunto V(G) eh RED-OLD
-      if(g5 && S.size() == n){ 
+      if(((2/3) * n) > tamanho_de_S) continue; 
+      
+      // Otimizando: se o grafo possui g(G) (cintura) >= 5, entao V(G) é RED-OLD
+      if(g5 && tamanho_de_S == n){ 
         Qtd_RED_OLDs++;
-        Vlrs_Possiveis_RED_OLD.insert(S.size());
+        if(tamanho_de_S < RED_OLD_G){
+          RED_OLD_G = tamanho_de_S;
+        }
         continue;
       }  
 
@@ -112,48 +125,51 @@ int main(int argc, char *argv[]) {
       int eh_RED_OLD = 1; 
 
       // Loop passando por cada par de vertice distinto u e v do grafo
-        for (auto &pp : pares_distintos) { 
-            int flag_u = 0;
-            int flag_v = 0;
+      for (auto &pp : pares_distintos) { 
+        int flag_u = 0;
+        int flag_v = 0;
 
-            // Loop passando por cada elemento do conjunto S atual
-            for (auto &s : S) { 
+        // Loop passando por cada elemento do conjunto S atual
+        for (auto &s : S) { 
 
-                auto tem_u = vizinhancas[s].find(pp.first);
-                auto tem_v = vizinhancas[s].find(pp.second);
-                auto s_end = vizinhancas[s].end();
+          auto tem_u = vizinhancas[s].find(pp.first);
+          auto tem_v = vizinhancas[s].find(pp.second);
+          auto s_end = vizinhancas[s].end();
 
-                // Conferindo se a vizinhanca do elemento de S atual tem APENAS o u
-                if(tem_u != s_end && tem_v == s_end) { 
-                    flag_u = 1;
-                    continue;
-                } 
-                // Conferindo se a vizinhanca do elemento de S atual tem APENAS o v
-                else if(tem_v != s_end && tem_u == s_end) { 
-                    flag_v = 1;
-                    continue;
-                } 
-            }
-
-            // Se alguma dessas flag ainda eh false entao o conjunto S atual nao cobriu esse par logo S nao eh RED-OLD
-            if(!flag_u || !flag_v){ 
-                eh_RED_OLD = 0;
-                break;
-            }
+          // Conferindo se a vizinhanca do elemento de S atual tem APENAS o u
+          if(tem_u != s_end && tem_v == s_end) { 
+            flag_u = 1;
+            continue;
+          } 
+          // Conferindo se a vizinhanca do elemento de S atual tem APENAS o v
+          else if(tem_v != s_end && tem_u == s_end) { 
+            flag_v = 1;
+            continue;
+          } 
         }
+
+        // Se alguma dessas flag ainda eh false entao o conjunto S atual nao cobriu esse par logo S nao eh RED-OLD
+        if(!flag_u || !flag_v){ 
+          eh_RED_OLD = 0;
+          break;
+        }
+      }
 
         // Se essa flag ainda eh true entao esse conjunto S eh RED-OLD
-        if(eh_RED_OLD){ 
-            Qtd_RED_OLDs++;
+      if(eh_RED_OLD){ 
+        Qtd_RED_OLDs++;
 
-            // Guardando o tamanho de S como um valor possivel de RED-OLD(G)
-            Vlrs_Possiveis_RED_OLD.insert(S.size()); 
+        // Guardando o tamanho de S como um valor possivel de RED-OLD(G)
+        if(tamanho_de_S < RED_OLD_G){
+          RED_OLD_G = tamanho_de_S;
         }
+      }
     }
 
     // Se algum conjunto S eh RED-OLD entao significa que esse grafo tem um conjunto RED-OLD possivel
     if(Qtd_RED_OLDs > 0){ 
-        Qtd_Grafos_com_RED_OLD++;
+      Vlrs_Possiveis_RED_OLD.insert(RED_OLD_G);
+      Qtd_Grafos_com_RED_OLD++;
     }
   }
 
