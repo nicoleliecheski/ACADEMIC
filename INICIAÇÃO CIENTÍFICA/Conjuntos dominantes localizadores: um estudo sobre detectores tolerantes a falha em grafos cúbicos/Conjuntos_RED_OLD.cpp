@@ -5,8 +5,11 @@ e registra a RED-OLD(G) de cada
 */
 // Os grafos estao armazenados em arquivos do tipo .g6
 // Utiliza funcoes dos cabecalhos personalizados "subset.h" e "graphio.h"
-// Para compilar utilize o comando "g++ -o Conjuntos_RED_OLD Conjuntos_RED_OLD.cpp subset.cpp graphio.c"
-// Para executar utilize o comando "./Conjuntos_RED_OLD <nome do arquivo>.g6"
+// Para compilar:
+// 1. gcc -c graphio.c -o graphio.o  
+// 2. g++ -o Conjuntos_RED_OLD Conjuntos_RED_OLD.cpp subset.cpp graphio.o
+// Para executar:
+// ./Conjuntos_RED_OLD <nome do arquivo>.g6
 
 #include "graphio.h"
 #include "subset.h"
@@ -38,12 +41,12 @@ int main(int argc, char *argv[]) {
   // Abrindo o arquivo de entrada do tipo .g6
   // Um arquivo so pode conter varios grafos mas todos possuem o mesmo tamanho de V(G) 
   if (argc < 2) {
-    fprintf(stderr, "Usage: %s <input.g6>\n", argv[0]);
+    fprintf(stderr, "Usando: %s <input.g6>\n", argv[0]);
     return -1;
   }
   FILE *f = fopen(argv[1], "r");
   if (f == NULL) {
-    fprintf(stderr, "Error: Unable to open file '%s'\n", argv[1]);
+    fprintf(stderr, "Erro: Nao foi possivel abrir o arquivo '%s'\n", argv[1]);
     return -1;
   }
 
@@ -68,7 +71,7 @@ int main(int argc, char *argv[]) {
   while ((s = showg_getline(f)) != NULL) { 
     // Quantidade de conjuntos RED-OLD que o grafo atual possui
     int Qtd_RED_OLDs = 0;
-    // Cardinalidade minima de um subconjunto RED-OLD em G
+    // RED-OLD(G), cardinalidade minima de um subconjunto RED-OLD em G
     int RED_OLD_G = INT_MAX;
     graph_num++;
 
@@ -175,7 +178,7 @@ int main(int argc, char *argv[]) {
 
   // Verificando se o arquivo nao esta vazio
   if (graph_num == 0) {
-    fprintf(stderr, "Error: No graph line read (empty file?)\n");
+    fprintf(stderr, "Erro: Nao foi lido nenhuma linha de grafo (arquivo vazio?)\n");
     fclose(f);
     return -1;
   } else {
