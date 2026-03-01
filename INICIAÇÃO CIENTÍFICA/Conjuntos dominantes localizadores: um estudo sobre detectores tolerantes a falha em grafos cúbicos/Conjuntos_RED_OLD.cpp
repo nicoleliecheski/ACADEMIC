@@ -49,46 +49,58 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Erro: Nao foi possivel abrir o arquivo '%s'\n", argv[1]);
     return -1;
   }
-
+  
   // Quantidade de grafos do arquivo de entrada que possuem um conjunto RED-OLD possivel
   int Qtd_Grafos_com_RED_OLD = 0;
-
+  
   // Valores (tamanhos) possiveis dos conjuntos RED-OLD dos grafos de entrada
   set<int> Vlrs_Possiveis_RED_OLD;
-
+  
   // Tamanho de V(G)
   int n = 0;
 
+  int m = 0;
+  
+  // Pares de vertices distintos possiveis
+  vector<pair<int, int> > pares_distintos;
+
+  // Todos os subconjuntos possiveis
+  set<set<int> > conjuntos_S;
+  
   // Verificacao para saber se os grafos do arquivo possuem cintura maior ou igual a 5
   int g5 = 0;
   cout << "g(G) >= 5? (1/0)\n";
   cin >> g5;
-
+  
   char *s;
   // Indice do grafo atual
   int graph_num = 0;
   // Loop para pegar todos os grafos no arquivo .g6
   while ((s = showg_getline(f)) != NULL) { 
+    // Otimizando: operações que só precisam ser realizadas na primeira iteração pois o n eh igual em todos os grafos
+    if(graph_num == 0){
+      n = graphsize(s); 
+      m = graph_row_words(n);
+
+      // Gerando todos os pares de vertices distintos possiveis do grafo baseado no valor de n
+      for (int i = 0; i < n; i++) {
+        for (int j = i + 1; j < n; j++) {
+          pair<int, int> par(i, j);
+          pares_distintos.push_back(par);
+        }
+      }
+
+      // Gerando todos os subconjuntos S possiveis de vertices do grafo baseado no valor de n
+      conjuntos_S = subsets(n); 
+    }
+
     // Quantidade de conjuntos RED-OLD que o grafo atual possui
     int Qtd_RED_OLDs = 0;
     // RED-OLD(G), cardinalidade minima de um subconjunto RED-OLD em G
     int RED_OLD_G = INT_MAX;
     graph_num++;
 
-    // Otimizando: o n eh sempre igual nos arquivos
-    if(n == 0) n = graphsize(s); 
-
-    // Gerando todos os pares de vertices distintos possiveis do grafo
-    vector<pair<int, int> > pares_distintos;
-    for (int i = 0; i < n; i++) {
-      for (int j = i + 1; j < n; j++) {
-        pair<int, int> par(i, j);
-        pares_distintos.push_back(par);
-      }
-    }
-
     // Tratamento dos dados do arquivo para poderem ser manipulados
-    int m = graph_row_words(n);
     vector<unsigned long> g((size_t)n * m);
     stringtograph(s, g.data(), m);
     
@@ -98,9 +110,6 @@ int main(int argc, char *argv[]) {
       set<int> vizi = vizinhos(g.data(), i, m);
       vizinhancas.push_back(vizi);
     }
-    
-    // Todos os subconjuntos S possiveis de vertices desse grafo
-    set<set<int> > conjuntos_S = subsets(n); 
 
     // Loop passando por cada conjunto S
     for (auto &S : conjuntos_S) {  
