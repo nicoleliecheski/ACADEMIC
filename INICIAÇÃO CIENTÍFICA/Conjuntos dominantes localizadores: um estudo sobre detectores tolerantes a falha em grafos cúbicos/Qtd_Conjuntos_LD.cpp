@@ -2,7 +2,7 @@
 // O grafos esta armazenado em arquivo do tipo .g6
 // Quando ha mais de um grafo em um arquivo ele interage apenas com o primeiro
 // Utiliza funcoes dos cabecalhos personalizados "subset.h" e "graphio.h"
-// Para compilar utilize o comando "g++ -o Qtd_Conjuntos_LD Qtd_Conjuntos_LD.cpp subset.cpp graphio.c"
+// Para compilar utilize o comando "g++ -o Qtd_Conjuntos_LD Qtd_Conjuntos_LD.cpp subset.cpp graphio.o"
 // Para executar utilize o comando "./Qtd_Conjuntos_LD <nome do arquivo>.g6"
 
 #include <iostream>
@@ -10,7 +10,7 @@
 #include <algorithm> 
 #include <stdio.h>
 #include "subset.h"
-#include "showg.h"
+#include "graphio.h"
 using namespace std;
 
 int main(int argc, char *argv[]) {
