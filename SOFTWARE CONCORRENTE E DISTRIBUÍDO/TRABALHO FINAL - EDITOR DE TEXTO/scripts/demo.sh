@@ -54,13 +54,13 @@ curl -fsS "$GW/docs/doc-A" | "$PY" -c 'import sys,json;d=json.load(sys.stdin);pr
 note "ASYNC (live WS): the op.applied + annotation events above. Gateway logs label [SYNC] vs WS."
 
 hr "6. Read from replica (consistency/availability trade-off)"
-note "Both nodes of shardA are alive; serving this read from the replica."
+note "Both nodes of sharda are alive; serving this read from the replica."
 curl -fsS "$GW/docs/doc-A?replica=1" | "$PY" -c 'import sys,json;d=json.load(sys.stdin);print("  servedBy=%s seq=%s"%(d.get("servedBy"),d["seq"]))'
 
-hr "7. Availability: kill the current primary of shardA -> replica takes over"
+hr "7. Availability: kill the current primary of sharda -> replica takes over"
 SEQ_BEFORE=$(curl -fsS "$GW/docs/doc-A" | "$PY" -c 'import sys,json;print(json.load(sys.stdin)["seq"])')
 echo "  doc-A seq before failover: $SEQ_BEFORE"
-bash scripts/kill_primary.sh shardA
+bash scripts/kill_primary.sh sharda
 note "Writing to doc-A right after failover (gateway re-resolves primary + retries)..."
 "$PY" "$SIM" edit --doc doc-A --client post-failover --ops 5
 SEQ_AFTER=$(curl -fsS "$GW/docs/doc-A" | "$PY" -c 'import sys,json;print(json.load(sys.stdin)["seq"])')

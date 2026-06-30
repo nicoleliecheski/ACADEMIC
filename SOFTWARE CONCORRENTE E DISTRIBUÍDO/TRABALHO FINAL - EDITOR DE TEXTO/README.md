@@ -112,7 +112,7 @@ node   clients/sim_client.js edit     --doc doc-A --client n1 --ops 15   # Node 
 ### Demonstrate availability (failover)
 
 ```bash
-scripts/kill_primary.sh shardA   # kills the current primary; a replica is promoted
+scripts/kill_primary.sh sharda   # kills the current primary; a replica is promoted
 make cluster                     # confirm the new primary
 # editing continues with continuous seq and no lost ops
 ```
