@@ -6,6 +6,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# PORT is provided via env (defaults to 9000). Single worker: the node keeps
-# authoritative in-memory state, so it must not be horizontally forked.
+# PORT vem por env (padrão 9000). Um único worker: o nó mantém estado
+# autoritativo em memória, então não pode ser bifurcado horizontalmente.
 CMD ["sh", "-c", "uvicorn app:app --host 0.0.0.0 --port ${PORT:-9000} --log-level warning"]

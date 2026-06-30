@@ -1,10 +1,10 @@
-"""Formatter worker.
+"""Worker de formatação.
 
-Consumes ``jobs:format`` (consumer group ``formatters``) and produces lightweight
-formatting suggestions (double spaces, trailing whitespace, sentences not
-starting with a capital, likely headings). Demonstrates *functional*
-partitioning: a separate worker pool on a separate stream, running concurrently
-with the spell-checkers and with live editing.
+Consome ``jobs:format`` (grupo de consumidores ``formatters``) e gera sugestões
+leves de formatação (espaços duplos, espaço ao fim da linha, frases que não
+começam com maiúscula, prováveis títulos). Demonstra o particionamento
+*funcional*: um pool de workers separado, em um stream separado, executando de
+forma concorrente com os corretores ortográficos e com a edição ao vivo.
 """
 
 from __future__ import annotations
@@ -32,7 +32,8 @@ _pub = aioredis.from_url(REDIS_URL, decode_responses=True)
 
 DOUBLE_SPACE = re.compile(r"  +")
 TRAILING_WS = re.compile(r"[ \t]+$", re.MULTILINE)
-SENTENCE_START = re.compile(r"(?:^|[.!?]\s+)([a-z])")
+# Início de frase: aceita minúsculas acentuadas (à-ÿ) além de a-z.
+SENTENCE_START = re.compile(r"(?:^|[.!?]\s+)([a-zà-ÿ])")
 
 
 async def handle(job: Dict) -> None:
@@ -42,14 +43,14 @@ async def handle(job: Dict) -> None:
 
     for m in DOUBLE_SPACE.finditer(text):
         suggestions.append({"range": [m.start(), m.end()], "kind": "double-space",
-                            "message": "collapse to a single space"})
+                            "message": "juntar em um único espaço"})
     for m in TRAILING_WS.finditer(text):
         suggestions.append({"range": [m.start(), m.end()], "kind": "trailing-space",
-                            "message": "remove trailing whitespace"})
+                            "message": "remover espaço ao fim da linha"})
     for m in SENTENCE_START.finditer(text):
         idx = m.start(1)
         suggestions.append({"range": [idx, idx + 1], "kind": "capitalize",
-                            "message": f"capitalize '{m.group(1)}'"})
+                            "message": f"começar com maiúscula '{m.group(1)}'"})
 
     payload = {
         "type": "format",

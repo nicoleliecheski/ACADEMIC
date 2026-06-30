@@ -1,6 +1,7 @@
-// Redis pub/sub bridge (the ASYNCHRONOUS notification path). A dedicated
-// subscriber connection pattern-subscribes to all document channels and listens
-// for cluster events; decoded messages are dispatched to registered handlers.
+// Ponte de pub/sub do Redis (o caminho de notificação ASSÍNCRONO). Uma conexão
+// dedicada de assinante faz pattern-subscribe em todos os canais de documento e
+// escuta os eventos de cluster; mensagens decodificadas são despachadas para os
+// handlers registrados.
 
 import { CLUSTER_EVENTS } from "./names.js";
 
@@ -12,14 +13,14 @@ export class RedisBus {
   }
 
   async start() {
-    // doc:*  matches doc:{id}, doc:{id}:annotations, doc:{id}:presence
+    // doc:*  casa com doc:{id}, doc:{id}:annotations, doc:{id}:presence
     await this.sub.psubscribe("doc:*");
     await this.sub.subscribe(CLUSTER_EVENTS);
 
     this.sub.on("pmessage", (_pattern, channel, message) => {
       let payload;
       try { payload = JSON.parse(message); } catch { return; }
-      const parts = channel.split(":"); // ["doc", "{id}", maybe "annotations"]
+      const parts = channel.split(":"); // ["doc", "{id}", talvez "annotations"]
       const docId = parts[1];
       const kind = parts[2] || "op"; // "op" | "annotations" | "presence"
       if (this.onDocEvent) this.onDocEvent(docId, kind, payload);

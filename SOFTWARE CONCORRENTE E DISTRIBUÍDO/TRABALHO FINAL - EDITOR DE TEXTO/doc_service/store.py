@@ -1,9 +1,9 @@
-"""In-memory authoritative document state with op-log and snapshots.
+"""Estado autoritativo de documentos em memória, com log de operações e snapshots.
 
-A ``DocState`` holds the materialized text plus the operation log since the last
-snapshot. ``DocStore`` owns the collection of documents and hands out a
-per-document :class:`asyncio.Lock` so that operation application is serialized
-**per document** (different documents proceed concurrently).
+Um ``DocState`` guarda o texto materializado mais o log de operações desde o
+último snapshot. O ``DocStore`` é dono da coleção de documentos e fornece um
+:class:`asyncio.Lock` por documento, de modo que a aplicação de operações seja
+serializada **por documento** (documentos diferentes prosseguem concorrentemente).
 """
 
 from __future__ import annotations
@@ -21,15 +21,15 @@ class DocState:
     def __init__(self, doc_id: str, shard_id: str):
         self.doc_id = doc_id
         self.shard_id = shard_id
-        self.seq: int = 0                 # last applied global seq for this doc
-        self.base_version: int = 0        # seq captured by snapshot_text
+        self.seq: int = 0                 # último seq global aplicado a este doc
+        self.base_version: int = 0        # seq capturado por snapshot_text
         self.snapshot_text: str = ""
-        self.text: str = ""               # materialized current text
-        self.oplog: List[OpLogEntry] = [] # entries with seq in (base_version, seq]
+        self.text: str = ""               # texto atual materializado
+        self.oplog: List[OpLogEntry] = [] # entradas com seq em (base_version, seq]
         self.seen_op_ids: set[str] = set()
         self.lock = asyncio.Lock()
 
-    # -- queries -------------------------------------------------------------
+    # -- consultas -----------------------------------------------------------
     def summary(self) -> Dict[str, Any]:
         return {
             "docId": self.doc_id,
@@ -40,10 +40,10 @@ class DocState:
         }
 
     def ops_since(self, since: int) -> Dict[str, Any]:
-        """Return everything a client needs to advance from ``since`` to head.
+        """Retorna tudo que um cliente precisa para avançar de ``since`` até a cabeça.
 
-        If ``since`` predates the current snapshot the snapshot is included so
-        the client can rebuild from scratch.
+        Se ``since`` for anterior ao snapshot atual, o snapshot é incluído para
+        que o cliente possa reconstruir do zero.
         """
         if since < self.base_version:
             return {
@@ -63,15 +63,16 @@ class DocState:
         }
 
     def intervening_ops(self, base_version: int) -> List[Dict[str, Any]]:
-        """Transformed ops applied after ``base_version`` (for rebasing)."""
+        """Ops transformadas aplicadas após ``base_version`` (para rebaseamento)."""
         return [e["op"] for e in self.oplog if e["seq"] > base_version]
 
-    # -- mutation ------------------------------------------------------------
+    # -- mutação -------------------------------------------------------------
     def append_applied(self, entry: OpLogEntry, snapshot_every: int) -> None:
-        """Record an already-sequenced, already-applied op-log entry.
+        """Registra uma entrada de log já sequenciada e já aplicada.
 
-        Idempotent on ``seq``: entries at or below the current head are ignored
-        (this is what makes replica replay and failover safe to re-run)."""
+        Idempotente em ``seq``: entradas em ou abaixo da cabeça atual são
+        ignoradas (é isto que torna seguro reexecutar o replay da réplica e o
+        failover)."""
         if entry["seq"] <= self.seq:
             return
         self.text = apply_op(self.text, entry["op"])
@@ -84,7 +85,7 @@ class DocState:
             self.compact()
 
     def compact(self) -> None:
-        """Fold the log into the snapshot and trim it."""
+        """Dobra o log no snapshot e o trunca."""
         self.snapshot_text = self.text
         self.base_version = self.seq
         self.oplog = [e for e in self.oplog if e["seq"] > self.base_version]

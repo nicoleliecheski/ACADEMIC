@@ -1,138 +1,141 @@
-# Architecture — Shared Document Editor
+# Arquitetura — Editor de Documentos Compartilhado
 
-## 1. Purpose
+## 1. Propósito
 
-A collaborative document editor where many remote clients view and edit the same
-documents at once. Edits are streamed live to every participant, and server-side
-background jobs (spell-check, formatter) annotate the text concurrently. The
-system is built to exercise the full set of concurrent + distributed-systems
-concerns: concurrency control, partitioning, replication, consistency,
-availability, synchronous and asynchronous interaction, and multi-language
-components.
+Um editor de documentos colaborativo em que muitos clientes remotos visualizam e
+editam os mesmos documentos ao mesmo tempo. As edições são transmitidas ao vivo a
+cada participante, e jobs de segundo plano no servidor (corretor ortográfico,
+formatador) anotam o texto concorrentemente. O sistema foi construído para
+exercitar todo o conjunto de preocupações de sistemas concorrentes e
+distribuídos: controle de concorrência, particionamento, replicação,
+consistência, disponibilidade, e interação síncrona e assíncrona, com componentes
+em mais de uma linguagem.
 
-## 2. Component overview
+## 2. Visão geral dos componentes
 
 ```
-        Internet clients  (web UI + simulated clients)
-              │   WebSocket (async)        REST (sync)
+        clientes na Internet  (UI web + clientes simulados)
+              │   WebSocket (assíncrono)     REST (síncrono)
               ▼
    ┌─────────────────────────────────────────────┐
-   │  GATEWAY / EDGE  (Node.js)                    │
-   │  REST + WebSocket terminator, sessions,       │
-   │  shard ROUTER, sync RPC to primaries,         │
-   │  Redis pub/sub → WebSocket fan-out            │
+   │  GATEWAY / BORDA  (Node.js)                   │
+   │  terminador REST + WebSocket, sessões,        │
+   │  ROTEADOR de shards, RPC síncrono aos primários,│
+   │  difusão Redis pub/sub → WebSocket            │
    └───────┬───────────────────────────┬──────────┘
-     sync RPC (HTTP/JSON)         Redis pub/sub
+     RPC síncrono                  Redis pub/sub
            │                            ▲
            ▼                            │
    ┌──────────────────────────────┐    │
-   │  DOCUMENT SERVICE (Python)    │    │
-   │  shardA: primary  ⇄ replica   │    │
-   │  shardB: primary  ⇄ replica   │    │
-   │  sequencer + op-log + lease   │    │
+   │  SERVIÇO DE DOCUMENTOS (Python)│   │
+   │  sharda: primário ⇄ réplica   │    │
+   │  shardb: primário ⇄ réplica   │    │
+   │  sequenciador + log + lease   │    │
    └───────┬──────────────────────┘    │
-   Redis Streams (jobs)                 │ publish annotations
+   Redis Streams (jobs)                 │ publica anotações
            ▼                            │
    ┌──────────────────────────────┐    │
    │  WORKERS (Python)             │────┘
-   │  spell-check pool, formatter  │
+   │  pool de corretor, formatador │
    └──────────────────────────────┘
    ┌──────────────────────────────┐
    │  REDIS — pub/sub, streams,    │
-   │  shard map, primary leases    │
+   │  mapa de shards, leases       │
    └──────────────────────────────┘
 ```
 
-| Component | Language | Role |
-|-----------|----------|------|
-| Gateway / Edge | Node.js | Public REST + WebSocket endpoints; validates and routes; resolves the shard primary; fans Redis events out to WebSocket clients. |
-| Document service | Python (FastAPI) | Authoritative per-shard document state; **sequencer** assigning a global per-doc `seq`; op-log; replication; lease-based primary election. |
-| Background workers | Python | Spell-check and formatter pools consuming Redis Streams concurrently with editing. |
-| Redis | — | Pub/Sub (notifications), Streams (job queue + replication transport), keys for shard map and leases. |
-| Web UI / sim clients | JS / Python / Node | Human-visible editor + scripted clients that drive the demo. |
+| Componente | Linguagem | Papel |
+|------------|-----------|-------|
+| Gateway / Borda | Node.js | Endpoints públicos REST + WebSocket; valida e roteia; resolve o primário do shard; difunde os eventos do Redis para os clientes WebSocket. |
+| Serviço de documentos | Python (FastAPI) | Estado autoritativo por shard; **sequenciador** que atribui um `seq` global por doc; log de operações; replicação; eleição de primário por lease. |
+| Workers de segundo plano | Python | Pools de corretor ortográfico e formatador consumindo Redis Streams concorrentemente com a edição. |
+| Redis | — | Pub/Sub (notificações), Streams (fila de jobs + transporte de replicação), chaves para o mapa de shards e leases. |
+| UI web / clientes simulados | JS / Python / Node | Editor visível a humanos + clientes programados que conduzem a demo. |
 
-## 3. Interaction paradigms
+## 3. Paradigmas de interação
 
-* **Client–server (request/response):** browsers/clients ↔ gateway (REST + WS);
-  gateway ↔ document service (HTTP/JSON RPC).
-* **Publish–subscribe:** document primaries publish `op.applied`; workers publish
-  annotations; the gateway subscribes and pushes to WebSocket clients.
-* **Messaging / queue:** Redis Streams carry background jobs (consumer groups)
-  and the replication op-log.
+* **Cliente–servidor (requisição/resposta):** navegadores/clientes ↔ gateway
+  (REST + WS); gateway ↔ serviço de documentos (RPC HTTP/JSON).
+* **Publicação–assinatura:** os primários publicam `op.applied`; os workers
+  publicam anotações; o gateway assina e envia aos clientes WebSocket.
+* **Mensageria / fila:** Redis Streams transportam jobs de segundo plano (grupos
+  de consumidores) e o log de operações de replicação.
 
-## 4. Data model
+## 4. Modelo de dados
 
-A document is a text snapshot plus an ordered operation log:
+Um documento é um snapshot de texto mais um log ordenado de operações:
 
 ```
-text = fold(snapshotText, opLog ordered by seq)
+texto = fold(snapshotText, opLog ordenado por seq)
 ```
 
-* **Edit operation (client → server):**
+* **Operação de edição (cliente → servidor):**
   `{ docId, clientId, baseVersion, op:{kind:"insert"|"delete", pos, text|len}, opId }`
-* **Op-log entry (after sequencing):** the above plus `seq`, transformed `op`,
+* **Entrada de log (após sequenciar):** o acima mais `seq`, `op` transformada,
   `ts`, `appliedBy`.
-* **Snapshot:** `{ docId, baseVersion, text }`, refreshed every `SNAPSHOT_EVERY`
-  operations and stored in Redis (`snap:{docId}`).
+* **Snapshot:** `{ docId, baseVersion, text }`, atualizado a cada
+  `SNAPSHOT_EVERY` operações e guardado no Redis (`snap:{docId}`).
 
-## 5. Concurrency control — central sequencer + op-log
+## 5. Controle de concorrência — sequenciador central + log de operações
 
-The shard **primary** is the single authoritative writer for each document and
-serializes operations with a per-document lock, producing one total order
-(`seq`). When a client's `baseVersion` is behind, the primary deterministically
-**rebases** the operation's position against the operations sequenced in between,
-then assigns the next `seq` and broadcasts the transformed operation. Because
-every replica/client applies the identical transformed operations in `seq`
-order, all copies converge. See `doc_service/ops.py` and `tests/test_ops.py`.
+O **primário** do shard é o único escritor autoritativo de cada documento e
+serializa as operações com uma trava por documento, produzindo uma ordem total
+(`seq`). Quando o `baseVersion` de um cliente está atrasado, o primário
+**rebaseia** de forma determinística a posição da operação sobre as operações
+sequenciadas no intervalo, então atribui o próximo `seq` e difunde a operação
+transformada. Como cada réplica/cliente aplica as mesmas operações transformadas
+na ordem de `seq`, todas as cópias convergem. Veja `doc_service/ops.py` e
+`tests/test_ops.py`.
 
-## 6. Partitioning
+## 6. Particionamento
 
-Documents are sharded by `docId` over a consistent-hash ring (`gateway/src/router.js`).
-The shard map lives in Redis (`shardmap`). The gateway hashes `docId` → shard,
-then resolves the shard's current primary from the lease key. Workers are split
-into independent spell-check and formatter pools — **functional** partitioning in
-addition to data partitioning.
+Os documentos são particionados por `docId` sobre um anel de hash consistente
+(`gateway/src/router.js`). O mapa de shards vive no Redis (`shardmap`). O gateway
+faz hash do `docId` → shard e então resolve o primário atual do shard pela chave
+de lease. Os workers são divididos em pools independentes de corretor e
+formatador — particionamento **funcional**, além do particionamento de dados.
 
-## 7. Replication
+## 7. Replicação
 
-Each shard has a primary and one or more replicas. The primary appends every
-op-log entry to a Redis Stream `replog:shard:{id}`; replicas consume it in `seq`
-order and apply entries idempotently (entries at/below the local head are
-skipped). Reads may be served by a replica (`?replica=1`), which returns its own
-possibly-stale `seq`. `REPL_MODE=sync` makes the primary wait for a replica ack
-before acknowledging a write.
+Cada shard tem um primário e uma ou mais réplicas. O primário acrescenta toda
+entrada de log a um Redis Stream `replog:shard:{id}`; as réplicas o consomem na
+ordem de `seq` e aplicam as entradas de forma idempotente (entradas em/abaixo da
+cabeça local são ignoradas). Leituras podem ser servidas por uma réplica
+(`?replica=1`), que retorna o seu próprio `seq` possivelmente defasado.
+`REPL_MODE=sync` faz o primário esperar o ack de uma réplica antes de confirmar
+uma escrita.
 
-## 8. Availability — lease-based failover
+## 8. Disponibilidade — failover baseado em lease
 
-Primary status is a Redis lease (`lease:shard:{id}`, `SET NX PX`) renewed
-periodically. If the primary dies, the lease expires and a replica acquires it,
-drains the replication stream, and announces `primary.changed` on
-`cluster.events`. The gateway re-resolves the primary and **retries** in-flight
-writes, so editing continues across a failover with continuous `seq` and no lost
-operations (idempotent replay guarantees safety). See `doc_service/lease.py` and
-`doc_service/replication.py`.
+O status de primário é um lease no Redis (`lease:shard:{id}`, `SET NX PX`)
+renovado periodicamente. Se o primário cai, o lease expira e uma réplica o
+adquire, drena o stream de replicação e anuncia `primary.changed` em
+`cluster.events`. O gateway re-resolve o primário e **tenta novamente** as
+escritas em andamento, então a edição continua durante o failover, com `seq`
+contínuo e sem operações perdidas (o replay idempotente garante a segurança).
+Veja `doc_service/lease.py` e `doc_service/replication.py`.
 
-## 9. Synchronous vs asynchronous
+## 9. Síncrono vs assíncrono
 
-* **Synchronous (blocking):** REST `POST /docs`, `GET /docs/{id}`,
-  `GET /docs/{id}/ops`, `POST /docs/{id}/snapshot|save`, and the gateway→primary
-  RPC.
-* **Asynchronous:** WebSocket op streaming, Redis Pub/Sub fan-out of `op.applied`
-  and annotations, and Redis Streams job dispatch.
+* **Síncrono (bloqueante):** REST `POST /docs`, `GET /docs/{id}`,
+  `GET /docs/{id}/ops`, `POST /docs/{id}/snapshot|save`, e o RPC gateway→primário.
+* **Assíncrono:** streaming de ops por WebSocket, difusão via Redis Pub/Sub de
+  `op.applied` e anotações, e despacho de jobs via Redis Streams.
 
-## 10. Background processing
+## 10. Processamento de segundo plano
 
-The primary marks edited documents dirty; a debounced flusher enqueues
-spell-check and format jobs onto Redis Streams. Worker pools consume via consumer
-groups (concurrent, at-least-once, with `XAUTOCLAIM` recovery) and publish
-annotations to `doc:{docId}:annotations`, which the gateway relays to clients —
-all while editing continues.
+O primário marca os documentos editados como sujos; um flusher com debounce
+enfileira jobs de corretor e de formatação no Redis Streams. Os pools de workers
+consomem via grupos de consumidores (concorrente, ao-menos-uma-vez, com
+recuperação por `XAUTOCLAIM`) e publicam anotações em
+`doc:{docId}:annotations`, que o gateway repassa aos clientes — tudo isso
+enquanto a edição continua.
 
-## 11. Deployment
+## 11. Implantação
 
-A single EC2 host runs every component as a container via `docker-compose`
-(1 gateway, 2 shards × {primary, replica}, 2 spell workers, 1 formatter, Redis).
-Public endpoints: `:8080` (REST + UI) and `:8081` (WebSocket). Because all
-coordination state lives in Redis, components can later be spread across multiple
-EC2 instances pointed at a shared Redis. See `docs/implementation.md` and the
-README for exact steps.
+Um único host EC2 roda cada componente como um container via `docker-compose`
+(1 gateway, 2 shards × {primário, réplica}, 2 workers de corretor, 1 formatador,
+Redis). Endpoints públicos: `:8080` (REST + UI) e `:8081` (WebSocket). Como todo
+o estado de coordenação vive no Redis, os componentes podem mais tarde ser
+espalhados por várias instâncias EC2 apontando para um Redis compartilhado. Veja
+`docs/implementation.md` e o README para os passos exatos.

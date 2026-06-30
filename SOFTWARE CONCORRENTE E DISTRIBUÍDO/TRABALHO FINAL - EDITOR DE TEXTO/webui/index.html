@@ -1,39 +1,39 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Shared Document Editor</title>
+  <title>Editor de Documentos Compartilhado</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <header>
-    <h1>Shared Document Editor</h1>
+    <h1>Editor de Documentos Compartilhado</h1>
     <div class="controls">
-      <label>Doc <input id="docId" value="doc-A" /></label>
-      <label>Client <input id="clientId" value="web-1" /></label>
-      <button id="connectBtn">Open</button>
-      <button id="snapshotBtn" title="Force a synchronous snapshot (REST)">Save</button>
-      <span id="status" class="status disconnected">disconnected</span>
+      <label>Documento <input id="docId" value="doc-A" /></label>
+      <label>Cliente <input id="clientId" value="web-1" /></label>
+      <button id="connectBtn">Abrir</button>
+      <button id="snapshotBtn" title="Forçar um snapshot síncrono (REST)">Salvar</button>
+      <span id="status" class="status disconnected">desconectado</span>
       <span id="seq" class="seq">seq 0</span>
     </div>
   </header>
 
   <main>
     <section class="editor-pane">
-      <textarea id="editor" placeholder="Open a document to start editing..." disabled></textarea>
+      <textarea id="editor" placeholder="Abra um documento para começar a editar..." disabled></textarea>
     </section>
     <aside class="side">
       <div class="panel">
-        <h2>Presence</h2>
+        <h2>Presença</h2>
         <ul id="presence"></ul>
       </div>
       <div class="panel">
-        <h2>Spell-check</h2>
+        <h2>Ortografia</h2>
         <ul id="spellcheck" class="annotations"></ul>
       </div>
       <div class="panel">
-        <h2>Formatter</h2>
+        <h2>Formatação</h2>
         <ul id="format" class="annotations"></ul>
       </div>
     </aside>
@@ -41,8 +41,8 @@
 
   <footer>
     <small>
-      Live edits travel over WebSocket (async); open/save use REST (sync).
-      Annotations are produced by background workers and pushed via Redis pub/sub.
+      As edições ao vivo trafegam por WebSocket (assíncrono); abrir/salvar usam REST (síncrono).
+      As anotações são produzidas pelos workers de segundo plano e enviadas via Redis pub/sub.
     </small>
   </footer>
 

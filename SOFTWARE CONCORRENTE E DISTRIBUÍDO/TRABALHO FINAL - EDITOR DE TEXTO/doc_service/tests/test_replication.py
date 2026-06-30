@@ -1,9 +1,9 @@
-"""Integration-style tests for the op-log + replication invariants.
+"""Testes no estilo de integração para os invariantes de log de operações + replicação.
 
-These run without Redis or the network: they drive the same primitives the
-primary uses (rebase -> sequence -> append) to build an op-log, then replay that
-log into a fresh "replica" store and assert convergence. Also covers idempotent
-replay (the property that makes failover safe).
+Rodam sem Redis e sem rede: usam as mesmas primitivas que o primário usa
+(rebase -> sequenciar -> acrescentar) para construir um log de operações e então
+reaplicam esse log em um store "réplica" novo, verificando a convergência.
+Também cobrem o replay idempotente (a propriedade que torna o failover seguro).
 """
 
 import os
@@ -16,7 +16,7 @@ from store import DocState  # noqa: E402
 
 
 def _primary_apply(doc: DocState, client_op, base_version, op_id):
-    """Mirror of app.rpc_op's core: rebase, sequence, append. Returns the entry."""
+    """Espelho do núcleo de app.rpc_op: rebaseia, sequencia, acrescenta. Retorna a entrada."""
     intervening = doc.intervening_ops(base_version)
     transformed = rebase(client_op, intervening)
     entry = {
@@ -28,10 +28,10 @@ def _primary_apply(doc: DocState, client_op, base_version, op_id):
 
 
 def test_primary_sequences_concurrent_edits():
-    primary = DocState("doc", "shardA")
+    primary = DocState("doc", "sharda")
     primary.snapshot_text = "the fox"
     primary.text = "the fox"
-    # Two clients both based on version 0.
+    # Dois clientes, ambos com base na versão 0.
     e1 = _primary_apply(primary, {"kind": "insert", "pos": 4, "text": "quick "}, 0, "c1:1")
     e2 = _primary_apply(primary, {"kind": "insert", "pos": 4, "text": "brown "}, 0, "c2:1")
     assert primary.text == "the quick brown fox"
@@ -40,7 +40,7 @@ def test_primary_sequences_concurrent_edits():
 
 
 def test_replica_catches_up_to_primary():
-    primary = DocState("doc", "shardA")
+    primary = DocState("doc", "sharda")
     primary.snapshot_text = "the fox"
     primary.text = "the fox"
     log = [
@@ -49,7 +49,7 @@ def test_replica_catches_up_to_primary():
         _primary_apply(primary, {"kind": "delete", "pos": 0, "len": 4}, 2, "c1:2"),
     ]
 
-    replica = DocState("doc", "shardA")
+    replica = DocState("doc", "sharda")
     replica.snapshot_text = "the fox"
     replica.text = "the fox"
     for entry in log:
@@ -60,8 +60,8 @@ def test_replica_catches_up_to_primary():
 
 
 def test_idempotent_replay():
-    """Replaying the same entries twice (as happens around failover) is a no-op."""
-    primary = DocState("doc", "shardA")
+    """Reaplicar as mesmas entradas duas vezes (como acontece em volta do failover) é inócuo."""
+    primary = DocState("doc", "sharda")
     primary.snapshot_text = "abc"
     primary.text = "abc"
     log = [
@@ -69,10 +69,10 @@ def test_idempotent_replay():
         _primary_apply(primary, {"kind": "insert", "pos": 0, "text": "Y"}, 1, "c1:2"),
     ]
 
-    replica = DocState("doc", "shardA")
+    replica = DocState("doc", "sharda")
     replica.snapshot_text = "abc"
     replica.text = "abc"
-    for _ in range(2):                 # apply the whole log twice
+    for _ in range(2):                 # aplica todo o log duas vezes
         for entry in log:
             replica.append_applied(entry, snapshot_every=0)
 
@@ -81,7 +81,7 @@ def test_idempotent_replay():
 
 
 def test_snapshot_compaction_preserves_text():
-    doc = DocState("doc", "shardA")
+    doc = DocState("doc", "sharda")
     doc.snapshot_text = ""
     doc.text = ""
     for i in range(10):

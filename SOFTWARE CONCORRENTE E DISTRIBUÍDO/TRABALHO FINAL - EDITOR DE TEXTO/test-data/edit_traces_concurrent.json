@@ -1,19 +1,19 @@
 {
-  "description": "Two clients editing from the same baseVersion=0 over text 'the fox'. Server sequences c1 first; c2 is rebased over c1. Expected convergent text: 'the quick brown fox'.",
-  "baseText": "the fox",
+  "description": "Dois clientes editam a partir do mesmo baseVersion=0 sobre o texto 'a raposa'. O servidor sequencia c1 primeiro; c2 é rebaseado sobre c1. Texto convergente esperado: 'a rápida veloz raposa'.",
+  "baseText": "a raposa",
   "clients": [
     {
       "clientId": "c1",
       "ops": [
-        { "baseVersion": 0, "op": { "kind": "insert", "pos": 4, "text": "quick " }, "opId": "c1:1" }
+        { "baseVersion": 0, "op": { "kind": "insert", "pos": 2, "text": "rápida " }, "opId": "c1:1" }
       ]
     },
     {
       "clientId": "c2",
       "ops": [
-        { "baseVersion": 0, "op": { "kind": "insert", "pos": 4, "text": "brown " }, "opId": "c2:1" }
+        { "baseVersion": 0, "op": { "kind": "insert", "pos": 2, "text": "veloz " }, "opId": "c2:1" }
       ]
     }
   ],
-  "expectedFinalText": "the quick brown fox"
+  "expectedFinalText": "a rápida veloz raposa"
 }

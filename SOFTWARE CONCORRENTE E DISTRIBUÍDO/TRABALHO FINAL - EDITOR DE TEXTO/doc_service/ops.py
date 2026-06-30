@@ -1,23 +1,24 @@
-"""
-Pure text-operation primitives and positional rebasing.
+"""Primitivas puras de operação de texto e rebaseamento posicional.
 
-The collaborative-editing model is a *central sequencer with an operation log*:
-the shard primary is the single authoritative writer for a document and applies
-every operation in a total order defined by a per-document monotonic ``seq``.
+O modelo de edição colaborativa é um *sequenciador central com um log de
+operações*: o primário do shard é o único escritor autoritativo de um documento
+e aplica cada operação em uma ordem total definida por um ``seq`` monotônico por
+documento.
 
-This module is intentionally free of any I/O or framework code so it can be unit
-tested in isolation (see ``tests/test_ops.py``). Two operation kinds are
-supported:
+Este módulo é propositalmente livre de I/O ou código de framework, para poder
+ser testado isoladamente (veja ``tests/test_ops.py``). Há suporte a dois tipos
+de operação:
 
   * insert -> ``{"kind": "insert", "pos": int, "text": str}``
   * delete -> ``{"kind": "delete", "pos": int, "len": int}``
 
-A client submits an operation expressed against the document text it last saw
-(``baseVersion``). If, by the time the operation reaches the primary, newer
-operations have already been applied, the primary deterministically *rebases*
-the incoming operation's position against those intervening operations before
-assigning it a sequence number. Because the rebased ("transformed") operation is
-what gets broadcast to every client, all replicas converge on identical text.
+Um cliente envia uma operação expressa em relação ao texto que viu por último
+(``baseVersion``). Se, quando a operação chega ao primário, operações mais novas
+já tiverem sido aplicadas, o primário **rebaseia** de forma determinística a
+posição da operação recebida sobre essas operações intermediárias antes de lhe
+atribuir um número de sequência. Como a operação rebaseada ("transformada") é a
+que é difundida a todos os clientes, todas as réplicas convergem para o mesmo
+texto.
 """
 
 from __future__ import annotations
@@ -28,9 +29,10 @@ Op = Dict[str, Any]
 
 
 def apply_op(text: str, op: Op) -> str:
-    """Apply a single (already-positioned) operation to ``text``.
+    """Aplica uma única operação (já posicionada) a ``text``.
 
-    Positions are clamped into range so a slightly stale position never raises.
+    As posições são limitadas ao intervalo válido, de modo que uma posição
+    levemente desatualizada nunca cause exceção.
     """
     kind = op["kind"]
     pos = max(0, min(int(op["pos"]), len(text)))
@@ -41,26 +43,26 @@ def apply_op(text: str, op: Op) -> str:
         length = max(0, int(op.get("len", 0)))
         end = min(pos + length, len(text))
         return text[:pos] + text[end:]
-    raise ValueError(f"unknown op kind: {kind!r}")
+    raise ValueError(f"tipo de op desconhecido: {kind!r}")
 
 
 def _shift_against(op: Op, earlier: Op) -> Op:
-    """Return ``op`` with its position shifted to account for ``earlier`` having
-    been applied first. ``op`` and ``earlier`` are not mutated."""
+    """Retorna ``op`` com a posição deslocada para considerar que ``earlier`` foi
+    aplicada antes. ``op`` e ``earlier`` não são modificados."""
     pos = int(op["pos"])
     e_pos = int(earlier["pos"])
 
     if earlier["kind"] == "insert":
         e_len = len(earlier.get("text", ""))
-        # An earlier insert at or before our position pushes us to the right.
-        # Tie-break (e_pos == pos): the already-sequenced insert wins the spot,
-        # so the incoming op moves after it -> deterministic and stable.
+        # Uma inserção anterior em posição <= à nossa nos empurra para a direita.
+        # Desempate (e_pos == pos): a inserção já sequenciada fica com o lugar, e
+        # a operação recebida vai para depois dela -> determinístico e estável.
         if e_pos <= pos:
             pos += e_len
     elif earlier["kind"] == "delete":
         e_len = max(0, int(earlier.get("len", 0)))
         if e_pos < pos:
-            # Remove the overlap between the deleted range and our offset.
+            # Remove a sobreposição entre a faixa apagada e o nosso deslocamento.
             pos -= min(e_len, pos - e_pos)
 
     rebased = dict(op)
@@ -69,10 +71,10 @@ def _shift_against(op: Op, earlier: Op) -> Op:
 
 
 def rebase(op: Op, intervening: List[Op]) -> Op:
-    """Rebase ``op`` over the ordered list of ``intervening`` operations that
-    were sequenced after the op's ``baseVersion`` but before it.
+    """Rebaseia ``op`` sobre a lista ordenada de operações ``intervening`` que
+    foram sequenciadas após o ``baseVersion`` da op, mas antes dela.
 
-    The result is the operation expressed against the *current* server text.
+    O resultado é a operação expressa em relação ao texto *atual* do servidor.
     """
     rebased = dict(op)
     for earlier in intervening:
@@ -81,9 +83,9 @@ def rebase(op: Op, intervening: List[Op]) -> Op:
 
 
 def fold(snapshot_text: str, ordered_ops: List[Op]) -> str:
-    """Materialize text by folding already-transformed ops over a snapshot.
+    """Materializa o texto dobrando ops já transformadas sobre um snapshot.
 
-    Used by replicas and by clients to reconstruct state from the op-log.
+    Usado por réplicas e por clientes para reconstruir o estado a partir do log.
     """
     text = snapshot_text
     for op in ordered_ops:

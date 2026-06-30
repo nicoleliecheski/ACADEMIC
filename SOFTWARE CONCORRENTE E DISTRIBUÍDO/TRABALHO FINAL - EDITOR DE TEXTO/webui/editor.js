@@ -1,27 +1,28 @@
-// Minimal collaborative editor UI.
+// Interface mínima do editor colaborativo.
 //
-// Live edits use the WebSocket path; open/save use REST. To keep the UI small,
-// the client applies remote operations optimistically and falls back to a full
-// synchronous REST resync whenever it detects a sequence gap (self-healing).
-// The *rigorous* convergence guarantee is proven by clients/sim_client.py's
-// `converge` command -- this page is for human-visible demonstration.
+// As edições ao vivo usam o caminho WebSocket; abrir/salvar usam REST. Para
+// manter a UI simples, o cliente aplica operações remotas de forma otimista e
+// recorre a um resync síncrono via REST sempre que detecta um buraco na
+// sequência (auto-recuperação). A garantia *rigorosa* de convergência é provada
+// pelo comando `converge` de clients/sim_client.py — esta página é para
+// demonstração visual a humanos.
 
 const $ = (id) => document.getElementById(id);
-const REST = location.origin;                         // same host serves REST + UI
+const REST = location.origin;                         // o mesmo host serve REST + UI
 const WS_URL = `ws://${location.hostname}:8081`;
 
 let ws = null;
 let docId = null;
 let clientId = null;
 let serverSeq = 0;
-let lastText = "";          // last text we reconciled against
+let lastText = "";          // último texto com o qual reconciliamos
 let opCounter = 0;
-let applyingRemote = false; // guard so remote edits don't echo as new ops
+let applyingRemote = false; // trava para edições remotas não ecoarem como novas ops
 const presence = new Map();
 
 function setStatus(connected) {
   const el = $("status");
-  el.textContent = connected ? "connected" : "disconnected";
+  el.textContent = connected ? "conectado" : "desconectado";
   el.className = "status " + (connected ? "connected" : "disconnected");
 }
 
@@ -32,7 +33,7 @@ function applyOp(text, op) {
   return text.slice(0, pos) + text.slice(end);
 }
 
-// Derive a single insert/delete op from old->new by common prefix/suffix.
+// Deriva uma única op de inserção/remoção comparando old->new por prefixo/sufixo comum.
 function diffToOp(oldText, newText) {
   if (oldText === newText) return null;
   let start = 0;
@@ -46,7 +47,7 @@ function diffToOp(oldText, newText) {
   const added = newText.slice(start, endNew);
   if (added && !removed) return { kind: "insert", pos: start, text: added };
   if (removed && !added) return { kind: "delete", pos: start, len: removed.length };
-  // Replacement: model as delete then insert (two ops).
+  // Substituição: modela como remoção seguida de inserção (duas ops).
   return [{ kind: "delete", pos: start, len: removed.length },
           { kind: "insert", pos: start, text: added }];
 }
@@ -97,12 +98,12 @@ function onMessage(raw) {
       break;
     case "op.applied":
       if (msg.clientId === clientId && msg.seq === serverSeq + 1) {
-        serverSeq = msg.seq;                 // our own echo
+        serverSeq = msg.seq;                 // eco da nossa própria op
       } else if (msg.seq === serverSeq + 1) {
         setEditorText(applyOp($("editor").value, msg.transformedOp));
         serverSeq = msg.seq;
       } else if (msg.seq > serverSeq + 1) {
-        resyncRest();                        // gap -> synchronous backfill
+        resyncRest();                        // buraco na sequência -> backfill síncrono
       }
       $("seq").textContent = `seq ${serverSeq}`;
       break;
@@ -113,7 +114,7 @@ function onMessage(raw) {
       renderPresence(msg);
       break;
     case "error":
-      console.warn("server error:", msg.error);
+      console.warn("erro do servidor:", msg.error);
       break;
   }
 }
@@ -123,11 +124,11 @@ function renderAnnotation(msg) {
     $("spellcheck").innerHTML = msg.issues.map((i) =>
       `<li><span class="word">${i.word}</span> @${i.range[0]}–${i.range[1]}
        ${i.suggest && i.suggest.length ? `→ <span class="suggest">${i.suggest.join(", ")}</span>` : ""}</li>`
-    ).join("") || "<li>no issues</li>";
+    ).join("") || "<li>nenhum problema</li>";
   } else if (msg.suggestions !== undefined) {
     $("format").innerHTML = msg.suggestions.map((s) =>
       `<li><span class="kind">${s.kind}</span> @${s.range[0]} — ${s.message}</li>`
-    ).join("") || "<li>looks clean</li>";
+    ).join("") || "<li>sem sugestões</li>";
   }
 }
 
@@ -158,7 +159,7 @@ $("snapshotBtn").addEventListener("click", async () => {
 });
 $("editor").addEventListener("input", onEditorInput);
 
-// Auto-connect if ?doc= / ?client= present in URL.
+// Conecta automaticamente se ?doc= / ?client= estiverem presentes na URL.
 const params = new URLSearchParams(location.search);
 if (params.get("doc")) $("docId").value = params.get("doc");
 if (params.get("client")) $("clientId").value = params.get("client");

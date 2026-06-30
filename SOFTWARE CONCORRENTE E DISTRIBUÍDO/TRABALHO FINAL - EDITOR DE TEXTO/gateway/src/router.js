@@ -1,12 +1,13 @@
-// Shard router: maps a docId to its shard (consistent-hash ring) and resolves
-// the shard's current PRIMARY from the Redis lease key. Results are cached and
-// invalidated on `primary.changed` cluster events or on RPC failure.
+// Roteador de shards: mapeia um docId para o seu shard (anel de hash consistente)
+// e resolve o PRIMÁRIO atual do shard a partir da chave de lease no Redis. Os
+// resultados são cacheados e invalidados em eventos `primary.changed` do cluster
+// ou em falha de RPC.
 
 import crypto from "node:crypto";
 import { SHARDMAP, leaseKey } from "./names.js";
 
 function hash32(s) {
-  // Stable 32-bit hash (md5 prefix) — deterministic across Node and Python.
+  // Hash estável de 32 bits (prefixo md5), determinístico entre Node e Python.
   const h = crypto.createHash("md5").update(s).digest();
   return h.readUInt32BE(0);
 }
@@ -14,7 +15,7 @@ function hash32(s) {
 export class Router {
   constructor(redis) {
     this.redis = redis;
-    this.ring = [];        // sorted [{ point, shardId }] virtual nodes
+    this.ring = [];        // [{ point, shardId }] ordenado (nós virtuais)
     this.shards = [];      // [{ shardId, replicas: [addr,...] }]
     this.primaryCache = new Map(); // shardId -> addr
   }
@@ -36,14 +37,15 @@ export class Router {
     return map;
   }
 
-  // Consistent-hash lookup: first ring point clockwise from hash(docId).
+  // Busca por hash consistente: primeiro ponto do anel no sentido horário a
+  // partir de hash(docId).
   shardForDoc(docId) {
     if (this.ring.length === 0) throw new Error("router not loaded");
     const hp = hash32(docId);
     for (const node of this.ring) {
       if (node.point >= hp) return node.shardId;
     }
-    return this.ring[0].shardId; // wrap around
+    return this.ring[0].shardId; // dá a volta
   }
 
   shardConfig(shardId) {
@@ -54,7 +56,7 @@ export class Router {
     this.primaryCache.delete(shardId);
   }
 
-  // Resolve the live primary address by reading the lease key.
+  // Resolve o endereço do primário ativo lendo a chave de lease.
   async primaryAddr(shardId) {
     const cached = this.primaryCache.get(shardId);
     if (cached) return cached;
@@ -64,13 +66,13 @@ export class Router {
     return addr;
   }
 
-  // A replica address (for read-from-replica): any configured node that is not
-  // the current primary; fall back to the primary if none.
+  // Um endereço de réplica (para leitura na réplica): qualquer nó configurado
+  // que não seja o primário atual; cai para o primário se não houver outro.
   async replicaAddr(shardId) {
     const cfg = this.shardConfig(shardId);
     if (!cfg) throw new Error(`unknown shard ${shardId}`);
     let primary = null;
-    try { primary = await this.primaryAddr(shardId); } catch { /* ignore */ }
+    try { primary = await this.primaryAddr(shardId); } catch { /* ignora */ }
     const candidates = cfg.nodes.filter((a) => a !== primary);
     return candidates.length ? candidates[0] : primary;
   }

@@ -1,6 +1,6 @@
-// WebSocket hub: per-document rooms, client message handling, and fan-out of
-// Redis-delivered events to connected sockets. This is the live, asynchronous
-// edge that browsers and simulated clients connect to.
+// Hub de WebSocket: salas por documento, tratamento das mensagens dos clientes e
+// difusão dos eventos vindos do Redis para os sockets conectados. Esta é a borda
+// ao vivo e assíncrona à qual navegadores e clientes simulados se conectam.
 
 import { WebSocketServer } from "ws";
 import { presenceChannel } from "./names.js";
@@ -49,9 +49,9 @@ export class WsHub {
     this.rooms.get(msg.docId).add(ws);
     this.log(`WS join doc=${msg.docId} client=${msg.clientId}`);
 
-    // Send a full authoritative snapshot so the client can sync up (ASYNC join,
-    // backed by a SYNC read RPC under the hood). Auto-create the document if a
-    // client opens one that does not exist yet.
+    // Envia um snapshot autoritativo completo para o cliente sincronizar (join
+    // ASSÍNCRONO, apoiado por uma leitura RPC SÍNCRONA por baixo). Cria o
+    // documento automaticamente se um cliente abrir um que ainda não existe.
     try {
       let doc;
       try {
@@ -68,8 +68,9 @@ export class WsHub {
   }
 
   async _op(ws, msg) {
-    // Forward to the shard primary. The resulting op.applied comes back to ALL
-    // clients via Redis pub/sub (see server.js bus wiring), so we don't echo here.
+    // Encaminha ao primário do shard. O op.applied resultante volta a TODOS os
+    // clientes via Redis pub/sub (veja a fiação do bus em server.js), então não
+    // ecoamos aqui.
     try {
       await this.rpc.write("op", msg.docId, {
         docId: msg.docId,
@@ -99,7 +100,7 @@ export class WsHub {
     }
   }
 
-  // Called by the Redis bus when an event arrives for a document.
+  // Chamado pelo bus do Redis quando um evento chega para um documento.
   broadcast(docId, obj) {
     const room = this.rooms.get(docId);
     if (!room) return;

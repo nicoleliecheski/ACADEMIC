@@ -1,9 +1,10 @@
-"""Spell-check worker.
+"""Worker de verificação ortográfica.
 
-Consumes ``jobs:spellcheck`` (consumer group ``spellers`` -> run >1 replica to
-see concurrent consumption), scans the document text for misspelled words, and
-publishes character-range annotations to ``doc:{docId}:annotations``. The
-gateway relays these to clients over WebSocket as ``annotation`` events.
+Consome ``jobs:spellcheck`` (grupo de consumidores ``spellers`` — rode mais de
+uma réplica para ver o consumo concorrente), procura palavras incorretas no
+texto do documento e publica anotações por faixa de caracteres em
+``doc:{docId}:annotations``. O gateway repassa essas anotações aos clientes via
+WebSocket como eventos ``annotation``.
 """
 
 from __future__ import annotations
@@ -24,7 +25,8 @@ logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s [speller] %(levelname)s %(message)s")
 log = logging.getLogger("spellcheck")
 
-WORD_RE = re.compile(r"[A-Za-z']+")
+# Reconhece palavras com letras acentuadas do português (À-ÿ cobre ç, ã, é...).
+WORD_RE = re.compile(r"[A-Za-zÀ-ÿ']+")
 
 REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 JOBS_SPELLCHECK = "jobs:spellcheck"

@@ -1,14 +1,14 @@
-"""Primary-election via a Redis lease (the availability mechanism).
+"""Eleição de primário via um lease no Redis (o mecanismo de disponibilidade).
 
-Each shard has exactly one lease key ``lease:shard:{shardId}``. Whichever node
-holds it is the **primary**; everyone else is a replica. The holder renews the
-lease before its TTL expires. If the primary dies, the lease expires and a
-replica acquires it (``SET NX``) and is promoted. The ``PREFERRED_ROLE=primary``
-node attempts acquisition immediately while replicas wait
-``REPLICA_START_DELAY`` seconds, so the intended primary normally wins at boot.
+Cada shard tem exatamente uma chave de lease ``lease:shard:{shardId}``. Quem a
+detém é o **primário**; todos os demais são réplicas. O detentor renova o lease
+antes do seu TTL expirar. Se o primário cair, o lease expira e uma réplica o
+adquire (``SET NX``) e é promovida. O nó com ``PREFERRED_ROLE=primary`` tenta
+adquirir imediatamente, enquanto réplicas esperam ``REPLICA_START_DELAY``
+segundos, de modo que o primário pretendido normalmente vença no boot.
 
-A short callback fires on every role transition so the node can switch between
-producing the replication log (primary) and consuming it (replica).
+Um pequeno callback dispara a cada transição de papel, para que o nó alterne
+entre produzir o log de replicação (primário) e consumi-lo (réplica).
 """
 
 from __future__ import annotations
@@ -44,18 +44,18 @@ class LeaseManager:
         self._stop.set()
         if self._task:
             await asyncio.gather(self._task, return_exceptions=True)
-        # Best-effort release so a standby can take over immediately.
+        # Libera o lease no melhor esforço, para um standby assumir de imediato.
         if self.is_primary:
             try:
                 cur = await self.redis.get(self.key)
                 if cur == config.advertise_addr:
                     await self.redis.delete(self.key)
-            except Exception:  # pragma: no cover - shutdown best effort
+            except Exception:  # pragma: no cover - melhor esforço no desligamento
                 pass
 
     async def _run(self) -> None:
         if config.PREFERRED_ROLE != "primary":
-            # Give the preferred primary a head start at cold boot.
+            # Dá ao primário preferido uma vantagem no boot a frio.
             try:
                 await asyncio.wait_for(self._stop.wait(), timeout=config.REPLICA_START_DELAY)
                 return
@@ -66,7 +66,7 @@ class LeaseManager:
         while not self._stop.is_set():
             try:
                 if self.is_primary:
-                    # Renew only if we still own it (guards against split brain).
+                    # Renova só se ainda formos donos (evita split brain).
                     cur = await self.redis.get(self.key)
                     if cur == config.advertise_addr:
                         await self.redis.pexpire(self.key, ttl_ms)
@@ -78,7 +78,7 @@ class LeaseManager:
                     )
                     if acquired:
                         await self._become(True)
-            except Exception as exc:  # pragma: no cover - transient redis errors
+            except Exception as exc:  # pragma: no cover - erros transitórios do redis
                 log.warning("lease loop error: %s", exc)
 
             try:
@@ -94,7 +94,7 @@ class LeaseManager:
                  "PRIMARY" if primary else "REPLICA", config.SHARD_ID)
         await self.on_role_change(primary)
         if primary:
-            # Announce so gateways re-resolve routing for this shard.
+            # Anuncia para que os gateways re-resolvam o roteamento deste shard.
             await self.redis.publish(CLUSTER_EVENTS, json.dumps({
                 "type": "primary.changed",
                 "shardId": config.SHARD_ID,

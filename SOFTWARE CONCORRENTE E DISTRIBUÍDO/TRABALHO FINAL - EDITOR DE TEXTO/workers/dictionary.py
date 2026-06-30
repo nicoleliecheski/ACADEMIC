@@ -1,7 +1,10 @@
-"""Tiny spell-check dictionary with edit-distance-1 suggestions.
+"""Dicionário simples de verificação ortográfica com sugestões a distância de
+edição 1.
 
-Loads a newline-delimited word list (``DICT_PATH``, default ``/app/words.txt``).
-Pure and dependency-free so it is trivially testable.
+Carrega uma lista de palavras separadas por linha (``DICT_PATH``, padrão
+``/app/words.txt``). É puro e sem dependências, portanto trivial de testar.
+O alfabeto de sugestões inclui letras acentuadas do português, de modo que
+sugestões como ``você`` possam ser geradas a partir de ``voce``.
 """
 
 from __future__ import annotations
@@ -9,7 +12,8 @@ from __future__ import annotations
 import os
 from typing import List, Set
 
-_ALPHABET = "abcdefghijklmnopqrstuvwxyz"
+# Alfabeto usado para gerar candidatos de correção (inclui acentos do pt-BR).
+_ALPHABET = "abcdefghijklmnopqrstuvwxyzàáâãçéêíóôõú"
 
 
 class Dictionary:
@@ -32,7 +36,7 @@ class Dictionary:
 
     def is_word(self, token: str) -> bool:
         t = token.lower()
-        # Accept pure numbers and very short tokens.
+        # Aceita números puros e tokens muito curtos.
         if t.isdigit() or len(t) <= 1:
             return True
         return t in self.words
@@ -48,6 +52,7 @@ class Dictionary:
     def suggest(self, token: str, limit: int = 3) -> List[str]:
         t = token.lower()
         cands = [w for w in self._edits1(t) if w in self.words]
-        # Prefer suggestions that share the original first letter, then shortest.
+        # Prioriza sugestões que começam com a mesma letra e, depois, as de
+        # tamanho mais próximo.
         cands.sort(key=lambda w: (w[0] != t[0], abs(len(w) - len(t)), w))
         return cands[:limit]

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Run all unit/integration tests without requiring pytest.
+"""Roda todos os testes de unidade/integração sem exigir o pytest.
 
-`make test` uses pytest when available and falls back to this runner.
+`make test` usa o pytest quando disponível e recorre a este runner como fallback.
 """
 import os
 import sys
@@ -28,5 +28,5 @@ for mod in modules:
             print(f"FAIL {mod.__name__}.{fn.__name__}")
             traceback.print_exc()
 
-print(f"\n{total - failures}/{total} passed")
+print(f"\n{total - failures}/{total} passaram")
 sys.exit(1 if failures else 0)

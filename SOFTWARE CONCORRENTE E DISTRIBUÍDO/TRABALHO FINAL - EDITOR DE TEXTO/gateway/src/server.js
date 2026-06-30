@@ -1,11 +1,12 @@
-// Gateway / edge service.
-//   * REST API (sync, blocking) on HTTP_PORT  -> create/open/ops/snapshot/save
-//   * WebSocket (async, live)    on WS_PORT    -> live editing + notifications
-//   * Redis pub/sub bridge       -> fans op.applied / annotations to WS clients
-//   * Shard router               -> partitioning + primary resolution / failover
+// Serviço de gateway / borda.
+//   * API REST (síncrona, bloqueante) na HTTP_PORT -> create/open/ops/snapshot/save
+//   * WebSocket (assíncrono, ao vivo)  na WS_PORT   -> edição ao vivo + notificações
+//   * ponte de pub/sub do Redis        -> repassa op.applied / annotations aos clientes WS
+//   * roteador de shards               -> particionamento + resolução do primário / failover
 //
-// Two languages meet here: this Node edge talks HTTP/JSON to the Python
-// document-service nodes and shares Redis with the Python workers.
+// Duas linguagens se encontram aqui: esta borda em Node fala HTTP/JSON com os
+// nós do serviço de documentos em Python e compartilha o Redis com os workers
+// em Python.
 
 import http from "node:http";
 import path from "node:path";
@@ -28,7 +29,7 @@ const WEBUI_DIR = process.env.WEBUI_DIR ||
 
 const log = (...a) => console.log(new Date().toISOString(), ...a);
 
-// --- Redis connections (command, publish, subscribe must be separate) -------
+// --- Conexões Redis (comando, publicação e assinatura devem ser separadas) --
 const redis = new Redis(REDIS_URL);
 const pub = new Redis(REDIS_URL);
 const sub = new Redis(REDIS_URL);
@@ -36,8 +37,9 @@ const sub = new Redis(REDIS_URL);
 const router = new Router(redis);
 const rpc = new RpcClient(router);
 
-// Seed a default shard map on first boot if none exists. GW_SHARDMAP is a JSON
-// string describing shards and their node addresses (see docker-compose).
+// Semeia um mapa de shards padrão no primeiro boot, se nenhum existir.
+// GW_SHARDMAP é uma string JSON descrevendo os shards e os endereços dos seus
+// nós (veja o docker-compose).
 async function ensureShardMap() {
   const existing = await redis.get(SHARDMAP);
   if (existing) return;
@@ -48,7 +50,7 @@ async function ensureShardMap() {
 }
 
 // --------------------------------------------------------------------------- //
-// REST API (synchronous / blocking path)
+// API REST (caminho síncrono / bloqueante)
 // --------------------------------------------------------------------------- //
 const app = express();
 app.use(express.json());
@@ -60,7 +62,7 @@ app.get("/shardmap", async (_req, res) => {
   res.json({ shards: router.shards, ring: router.ring.length });
 });
 
-// Aggregate cluster view: who is primary/replica per shard right now.
+// Visão agregada do cluster: quem é primário/réplica por shard neste momento.
 app.get("/cluster", async (_req, res) => {
   const out = [];
   for (const shard of router.shards) {
@@ -119,7 +121,7 @@ app.post("/docs/:id/snapshot", async (req, res) => {
   }
 });
 
-// "save" is a client-facing alias that forces a durable snapshot.
+// "save" é um alias voltado ao cliente que força um snapshot durável.
 app.post("/docs/:id/save", async (req, res) => {
   log(`[SYNC] POST /docs/${req.params.id}/save`);
   try {
@@ -130,18 +132,18 @@ app.post("/docs/:id/save", async (req, res) => {
 });
 
 // --------------------------------------------------------------------------- //
-// WebSocket server (asynchronous / live path)
+// Servidor WebSocket (caminho assíncrono / ao vivo)
 // --------------------------------------------------------------------------- //
 const wsServer = http.createServer();
 const hub = new WsHub({ server: wsServer, rpc, pubRedis: pub, log });
 
 // --------------------------------------------------------------------------- //
-// Redis bus -> WS fan-out
+// Bus do Redis -> difusão para o WS
 // --------------------------------------------------------------------------- //
 const bus = new RedisBus(sub);
 bus.onDocEvent = (docId, kind, payload) => {
   if (kind === "annotations") hub.broadcast(docId, { ...payload, type: "annotation" });
-  else hub.broadcast(docId, payload); // op.applied / presence pass through
+  else hub.broadcast(docId, payload); // op.applied / presence passam direto
 };
 bus.onClusterEvent = (payload) => {
   if (payload.type === "primary.changed") {

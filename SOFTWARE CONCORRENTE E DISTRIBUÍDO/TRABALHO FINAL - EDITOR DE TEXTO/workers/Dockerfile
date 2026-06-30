@@ -5,7 +5,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
-# The dictionary file is mounted/copied to /app/words.txt via compose.
+# O arquivo de dicionário é montado/copiado para /app/words.txt via compose.
 
-# WORKER selects which worker to run: "spell" or "format".
+# WORKER escolhe qual worker rodar: "spell" ou "format".
 CMD ["sh", "-c", "if [ \"$WORKER\" = format ]; then python formatter_worker.py; else python spellcheck_worker.py; fi"]
