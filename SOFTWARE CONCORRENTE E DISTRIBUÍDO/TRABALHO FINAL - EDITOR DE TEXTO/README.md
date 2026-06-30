@@ -146,6 +146,45 @@ Because all coordination (leases, shard map, replication log) lives in Redis, th
 shards/replicas/workers can later be split across several EC2 instances pointed
 at a shared Redis, with a load balancer in front of multiple gateways.
 
+### Step-by-step on the AWS Academy Learner Lab
+
+The free **AWS Academy Learner Lab** works for this project. It is session-based:
+click **Start Lab** in the course (wait for the 🟢 dot), then **AWS** to open the
+console. The region is fixed (usually **us-east-1**) and the instance is *stopped*
+(not deleted) when the session ends — just **Start** it again next session, and
+note that its **public IP changes** each time.
+
+1. **Launch the instance.** EC2 → **Launch instances**:
+   - AMI: *Amazon Linux 2023*; Instance type: **t3.small** (or t3.medium); Storage: **20 GB**.
+   - Key pair: create one and download the `.pem`, *or* skip it and use
+     **EC2 Instance Connect** (browser SSH) in step 3.
+2. **Open ports (security group inbound rules):**
+
+   | Type | Port | Source |
+   |------|------|--------|
+   | SSH | 22 | `0.0.0.0/0` |
+   | Custom TCP | 8080 | `0.0.0.0/0` |
+   | Custom TCP | 8081 | `0.0.0.0/0` |
+
+   (`0.0.0.0/0` = open to anyone; fine for a short-lived class demo. Leave 6379 / 9000 closed.)
+3. **Connect:** select the instance → **Connect** → **EC2 Instance Connect** → **Connect**.
+4. **Install Docker, clone (this repo is public — no token needed), and run:**
+   ```bash
+   sudo dnf -y install git
+   git clone --branch task-ver-1 https://github.com/nicoleliecheski/ACADEMIC.git
+   cd "ACADEMIC/SOFTWARE CONCORRENTE E DISTRIBUÍDO/TRABALHO FINAL - EDITOR DE TEXTO"
+   bash scripts/aws_ec2_setup.sh    # installs Docker + Compose
+   newgrp docker                    # use docker without re-login
+   make up                          # build + start the cluster (~2-3 min first time)
+   make demo                        # run the full demonstration
+   ```
+   The folder names contain spaces/an accent, so the `cd` path **must** be quoted.
+5. **Open the UI** at `http://<EC2_PUBLIC_IP>:8080` (find the Public IPv4 address on
+   the EC2 *Instances* page). Open two browser tabs with the same Doc id to show
+   live collaboration.
+6. **When done:** EC2 → select instance → **Instance state → Stop** (saves budget;
+   Start it again next session).
+
 ## Repository layout
 
 See [`docs/implementation.md`](docs/implementation.md) for a full source map.
