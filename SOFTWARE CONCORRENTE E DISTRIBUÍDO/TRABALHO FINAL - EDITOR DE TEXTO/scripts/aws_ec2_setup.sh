@@ -6,7 +6,7 @@ set -euo pipefail
 
 if command -v dnf >/dev/null 2>&1; then        # Amazon Linux 2023 / Fedora
   sudo dnf -y update
-  sudo dnf -y install docker
+  sudo dnf -y install docker git make
   sudo systemctl enable --now docker
   sudo usermod -aG docker "$USER"
   # Compose plugin
@@ -17,7 +17,7 @@ if command -v dnf >/dev/null 2>&1; then        # Amazon Linux 2023 / Fedora
   sudo chmod +x "$DOCKER_CONFIG/cli-plugins/docker-compose"
 elif command -v apt-get >/dev/null 2>&1; then  # Ubuntu / Debian
   sudo apt-get update
-  sudo apt-get install -y docker.io docker-compose-v2
+  sudo apt-get install -y docker.io docker-compose-v2 git make
   sudo systemctl enable --now docker
   sudo usermod -aG docker "$USER"
 else
