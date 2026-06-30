@@ -1,13 +1,13 @@
 #!/usr/bin/env node
-// Minimal Node.js simulated client (WS parity with sim_client.py).
-// Usage: node sim_client.js edit --doc doc-A --client n1 --ops 15
-//        node sim_client.js type --doc doc-A --client n1 --text "hello wrld"
-// Requires the `ws` package (installed in the gateway image, or `npm i ws`).
+// Cliente simulado mínimo em Node.js (paridade WS com sim_client.py).
+// Uso: node sim_client.js edit --doc doc-A --client n1 --ops 15
+//      node sim_client.js type --doc doc-A --client n1 --text "ola mundo"
+// Requer o pacote `ws` (instalado na imagem do gateway, ou `npm install`).
 
 import WebSocket from "ws";
 
 const GW_WS = process.env.GW_WS || "ws://localhost:8081";
-const WORDS = ["alpha", "beta", "gamma", "node", "edit", "sync", "text", "live"];
+const WORDS = ["alfa", "beta", "gama", "nó", "editar", "sync", "texto", "vivo"];
 
 function arg(name, def) {
   const i = process.argv.indexOf(`--${name}`);
@@ -25,7 +25,7 @@ const cmd = process.argv[2];
 const docId = arg("doc", "doc-A");
 const clientId = arg("client", "n1");
 const ops = parseInt(arg("ops", "15"), 10);
-const literal = arg("text", "hello world");
+const literal = arg("text", "ola mundo");
 const delay = parseFloat(arg("delay", "0.05")) * 1000;
 
 const state = { text: "", seq: 0 };
@@ -71,7 +71,7 @@ async function drive() {
     }
   }
   await sleep(1000);
-  console.log(`[${clientId}] done; local seq=${state.seq} len=${state.text.length}`);
+  console.log(`[${clientId}] concluído; seq local=${state.seq} tam=${state.text.length}`);
   ws.close();
   process.exit(0);
 }

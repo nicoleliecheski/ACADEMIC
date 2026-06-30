@@ -1,15 +1,17 @@
-"""Op-log replication over a Redis Stream (the replication transport).
+"""Replicação do log de operações sobre um Redis Stream (transporte de replicação).
 
-The shard's op-log is a single Redis Stream ``replog:shard:{shardId}``:
+O log de operações do shard é um único Redis Stream ``replog:shard:{shardId}``:
 
-  * the **primary** XADDs each sequenced op-log entry (and ``create`` control
-    entries) after applying it locally;
-  * **replicas** XREAD the stream in order and apply each entry idempotently
-    (entries whose ``seq`` is at or below the doc head are skipped).
+  * o **primário** faz XADD de cada entrada de log já sequenciada (e de entradas
+    de controle ``create``) após aplicá-la localmente;
+  * as **réplicas** leem o stream com XREAD em ordem e aplicam cada entrada de
+    forma idempotente (entradas cujo ``seq`` esteja em ou abaixo da cabeça do doc
+    são ignoradas).
 
-A node tracks ``last_id`` for the stream across role flips. When a replica is
-promoted it first *drains* any outstanding entries, then begins producing -- so
-no operation is lost across a failover and ``seq`` stays continuous.
+Um nó mantém ``last_id`` para o stream através das trocas de papel. Quando uma
+réplica é promovida, ela primeiro *drena* quaisquer entradas pendentes e só
+então começa a produzir -- assim nenhuma operação é perdida em um failover e o
+``seq`` permanece contínuo.
 """
 
 from __future__ import annotations
@@ -37,9 +39,9 @@ class Replicator:
         self._consumer_task: Optional[asyncio.Task] = None
         self._consuming = asyncio.Event()
 
-    # -- producer side (primary) --------------------------------------------
+    # -- lado produtor (primário) -------------------------------------------
     async def produce(self, entry: Dict[str, Any]) -> int:
-        """Append an op-log / control entry to the stream. Returns # acks (sync)."""
+        """Acrescenta uma entrada de log/controle ao stream. Retorna nº de acks (sync)."""
         msg_id = await self.redis.xadd(self.stream, {"entry": json.dumps(entry)})
         self.last_id = msg_id
         if config.REPL_MODE == "sync":
@@ -47,10 +49,11 @@ class Replicator:
         return 0
 
     async def _await_replica_catchup(self, target_seq: int, timeout: float = 2.0) -> int:
-        """Best-effort wait until a replica has acknowledged ``target_seq``.
+        """Espera, no melhor esforço, até uma réplica confirmar ``target_seq``.
 
-        Replicas publish their applied head to ``replack:shard:{shard}`` (a simple
-        hash). This keeps REPL_MODE=sync honest without a full consensus layer.
+        As réplicas publicam sua cabeça aplicada em ``replack:shard:{shard}`` (um
+        hash simples). Isso mantém REPL_MODE=sync honesto sem uma camada de
+        consenso completa.
         """
         deadline = asyncio.get_event_loop().time() + timeout
         key = f"replack:shard:{config.SHARD_ID}"
@@ -62,7 +65,7 @@ class Replicator:
             await asyncio.sleep(0.02)
         return 0
 
-    # -- consumer side (replica) --------------------------------------------
+    # -- lado consumidor (réplica) ------------------------------------------
     def start_consuming(self) -> None:
         if self._consumer_task is None or self._consumer_task.done():
             self._consuming.set()
@@ -76,7 +79,7 @@ class Replicator:
             self._consumer_task = None
 
     async def drain(self) -> None:
-        """Apply all currently-available entries (used right before promotion)."""
+        """Aplica todas as entradas disponíveis no momento (usado logo antes da promoção)."""
         while True:
             resp = await self.redis.xread({self.stream: self.last_id}, count=500, block=10)
             if not resp:
@@ -90,14 +93,14 @@ class Replicator:
                 resp = await self.redis.xread({self.stream: self.last_id}, count=200, block=500)
                 if resp:
                     await self._apply_batch(resp)
-                    # Report our applied head for REPL_MODE=sync acks.
+                    # Reporta nossa cabeça aplicada para os acks de REPL_MODE=sync.
                     heads = [self.store.get(d).seq for d in self.store.all_doc_ids()
                              if self.store.get(d)]
                     if heads:
                         await self.redis.hset(ackkey, config.NODE_ID, max(heads))
             except asyncio.CancelledError:  # pragma: no cover
                 raise
-            except Exception as exc:  # pragma: no cover - transient
+            except Exception as exc:  # pragma: no cover - transitório
                 log.warning("replog consume error: %s", exc)
                 await asyncio.sleep(0.2)
 

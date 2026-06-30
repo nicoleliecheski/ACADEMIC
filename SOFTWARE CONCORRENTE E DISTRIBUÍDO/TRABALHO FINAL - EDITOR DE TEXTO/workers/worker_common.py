@@ -1,8 +1,8 @@
-"""Shared Redis Streams consumer-group plumbing for background workers.
+"""Infraestrutura compartilhada de grupos de consumidores do Redis Streams.
 
-Workers in the same group split a stream's entries between them (concurrent,
-at-least-once delivery). ``XACK`` confirms processing; ``XAUTOCLAIM`` recovers
-entries whose worker crashed mid-flight.
+Workers no mesmo grupo dividem as entradas de um stream entre si (consumo
+concorrente, entrega ao-menos-uma-vez). ``XACK`` confirma o processamento;
+``XAUTOCLAIM`` recupera entradas cujo worker caiu no meio do processamento.
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ async def ensure_group(redis: aioredis.Redis, stream: str, group: str) -> None:
 
 
 async def run_consumer(stream: str, group: str, handler: Handler) -> None:
-    """Consume ``stream`` in ``group`` forever, dispatching each job to ``handler``."""
+    """Consome ``stream`` no ``group`` indefinidamente, despachando cada job para ``handler``."""
     redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
     consumer = f"{group}-{socket.gethostname()}-{os.getpid()}"
     redis = aioredis.from_url(redis_url, decode_responses=True)
@@ -48,7 +48,7 @@ async def run_consumer(stream: str, group: str, handler: Handler) -> None:
                 for msg_id, fields in entries:
                     await _dispatch(redis, stream, group, msg_id, fields, handler)
 
-            # Periodically reclaim entries abandoned by crashed workers.
+            # Periodicamente recupera entradas abandonadas por workers que caíram.
             claimed = await redis.xautoclaim(stream, group, consumer,
                                               min_idle_time=10000, start=last_autoclaim, count=10)
             if claimed and claimed[1]:
@@ -57,7 +57,7 @@ async def run_consumer(stream: str, group: str, handler: Handler) -> None:
                     await _dispatch(redis, stream, group, msg_id, fields, handler)
         except asyncio.CancelledError:  # pragma: no cover
             raise
-        except Exception as exc:  # pragma: no cover - keep the worker alive
+        except Exception as exc:  # pragma: no cover - mantém o worker vivo
             log.warning("consumer loop error: %s", exc)
             await asyncio.sleep(0.5)
 
@@ -72,5 +72,5 @@ async def _dispatch(redis, stream, group, msg_id, fields, handler) -> None:
     except Exception as exc:  # pragma: no cover
         log.warning("handler error on %s: %s", msg_id, exc)
     finally:
-        # At-least-once: ack after handling (a crash before ack -> reprocessed).
+        # Ao-menos-uma-vez: confirma após processar (queda antes do ack -> reprocessa).
         await redis.xack(stream, group, msg_id)

@@ -1,4 +1,4 @@
-// Redis key/channel/stream names. MUST stay in sync with doc_service/names.py.
+// Nomes de chaves/canais/streams do Redis. DEVE ficar em sincronia com doc_service/names.py.
 
 export const SHARDMAP = "shardmap";
 export const CLUSTER_EVENTS = "cluster.events";

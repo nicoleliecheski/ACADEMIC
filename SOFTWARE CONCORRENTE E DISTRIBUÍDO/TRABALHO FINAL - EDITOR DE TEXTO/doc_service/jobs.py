@@ -1,10 +1,11 @@
-"""Background-job enqueuer (messaging via Redis Streams).
+"""Enfileirador de jobs de segundo plano (mensageria via Redis Streams).
 
-When the primary applies operations it marks the document "dirty". A periodic
-flusher coalesces rapid edits and enqueues one spell-check and one format job
-per dirty document onto ``jobs:spellcheck`` / ``jobs:format``. Worker pools
-consume these concurrently with ongoing editing (requirement: server-side
-processing concurrent with client access).
+Quando o primário aplica operações, ele marca o documento como "sujo". Um
+flusher periódico agrupa edições rápidas e enfileira um job de verificação
+ortográfica e um de formatação por documento sujo em
+``jobs:spellcheck`` / ``jobs:format``. Os pools de workers consomem esses jobs
+concorrentemente com a edição em andamento (requisito: processamento no servidor
+concorrente com o acesso dos clientes).
 """
 
 from __future__ import annotations
@@ -27,8 +28,8 @@ class JobEnqueuer:
     def __init__(self, redis: aioredis.Redis, store: DocStore):
         self.redis = redis
         self.store = store
-        self._dirty: Dict[str, int] = {}     # docId -> seq when last marked dirty
-        self._flushed: Dict[str, int] = {}    # docId -> seq last enqueued
+        self._dirty: Dict[str, int] = {}     # docId -> seq quando marcado sujo
+        self._flushed: Dict[str, int] = {}    # docId -> seq do último enfileiramento
         self._task = None
         self._stop = asyncio.Event()
         self._job_seq = 0
@@ -48,7 +49,7 @@ class JobEnqueuer:
         while not self._stop.is_set():
             try:
                 await self._flush_once()
-            except Exception as exc:  # pragma: no cover - transient
+            except Exception as exc:  # pragma: no cover - transitório
                 log.warning("flush error: %s", exc)
             try:
                 await asyncio.wait_for(self._stop.wait(), timeout=config.JOB_FLUSH_INTERVAL)

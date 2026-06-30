@@ -1,5 +1,5 @@
-Meeting notes for the distributed systems project.
+Notas da reunião do projeto de sistemas distribuídos.
 
-teh team will meet on monday to discuss the quik design of the document editor.
-we need to test concurrent editing  with many clients and verify consistency.
-the spell checker shoud flag misspelled words like helo and recieve.
+a equipe vai se reunir na segunda para discutir o editor de documentos.
+precisamos testar a edição concorrente com muitos clientes e verificar a consistência.
+o corretor ortográfico deveria marcar palavras erradas como voce, naum e menssagem.

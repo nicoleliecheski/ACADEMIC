@@ -1,14 +1,15 @@
-"""Document-service node (FastAPI).
+"""Nó do serviço de documentos (FastAPI).
 
-One process = one shard node. Its role (primary vs replica) is dynamic and set
-by lease ownership. The gateway calls this node's ``/rpc/*`` endpoints over plain
-HTTP/JSON (the synchronous interaction path). The primary is the single
-authoritative writer for documents in its shard:
+Um processo = um nó de shard. Seu papel (primário vs réplica) é dinâmico e
+definido pela posse do lease. O gateway chama os endpoints ``/rpc/*`` deste nó
+por HTTP/JSON (o caminho de interação síncrono). O primário é o único escritor
+autoritativo dos documentos do seu shard:
 
-    op  ->  per-doc lock  ->  assign seq  ->  rebase  ->  apply
-        ->  append op-log + replicate (XADD)  ->  publish op.applied  ->  ack
+    op  ->  trava por documento  ->  atribui seq  ->  rebaseia  ->  aplica
+        ->  acrescenta ao log + replica (XADD)  ->  publica op.applied  ->  ack
 
-Replicas follow the replication stream and serve (possibly stale) reads.
+As réplicas acompanham o stream de replicação e servem leituras (possivelmente
+defasadas).
 """
 
 from __future__ import annotations
@@ -41,7 +42,7 @@ log = logging.getLogger("doc_service")
 
 
 class Node:
-    """Holds the long-lived singletons for this process."""
+    """Mantém os singletons de vida longa deste processo."""
 
     def __init__(self) -> None:
         self.redis: aioredis.Redis = aioredis.from_url(config.REDIS_URL, decode_responses=True)
@@ -56,8 +57,8 @@ class Node:
 
     async def on_role_change(self, primary: bool) -> None:
         if primary:
-            # Drain any tail of the replication log before producing, so we never
-            # lose ops written by the previous primary, then stop consuming.
+            # Drena a cauda do log de replicação antes de produzir, para nunca
+            # perder ops escritas pelo primário anterior, e então para de consumir.
             await self.replicator.drain()
             await self.replicator.stop_consuming()
             self.jobs.start()
@@ -69,7 +70,7 @@ class Node:
 
     async def startup(self) -> None:
         await self.redis.ping()
-        # Replicas begin following immediately; the lease loop may promote later.
+        # As réplicas começam a acompanhar de imediato; o loop do lease pode promover depois.
         self.replicator.start_consuming()
         await self.lease.start()
         log.info("started node addr=%s preferred=%s", config.advertise_addr, config.PREFERRED_ROLE)
@@ -81,7 +82,7 @@ class Node:
         await self.redis.aclose()
 
 
-node: Node  # set in lifespan
+node: Node  # definido no lifespan
 
 
 @asynccontextmanager
@@ -99,7 +100,7 @@ app = FastAPI(title="doc-service", lifespan=lifespan)
 
 
 # --------------------------------------------------------------------------- #
-# Request models
+# Modelos de requisição
 # --------------------------------------------------------------------------- #
 class CreateReq(BaseModel):
     docId: str
@@ -115,7 +116,7 @@ class OpReq(BaseModel):
 
 
 # --------------------------------------------------------------------------- #
-# Health / introspection
+# Saúde / introspecção
 # --------------------------------------------------------------------------- #
 @app.get("/health")
 async def health():
@@ -134,11 +135,11 @@ async def role():
 
 
 # --------------------------------------------------------------------------- #
-# RPC: writes (primary only)
+# RPC: escritas (apenas no primário)
 # --------------------------------------------------------------------------- #
 def _require_primary():
     if not node.is_primary:
-        # 409 tells the gateway to re-resolve the current primary and retry.
+        # 409 diz ao gateway para re-resolver o primário atual e tentar de novo.
         raise HTTPException(status_code=409, detail="not primary for this shard")
 
 
@@ -150,7 +151,7 @@ async def rpc_create(req: CreateReq):
         if req.initialText and doc.seq == 0 and not doc.text:
             doc.snapshot_text = req.initialText
             doc.text = req.initialText
-        # Replicate a control entry so replicas materialize the doc too.
+        # Replica uma entrada de controle para as réplicas também materializarem o doc.
         await node.replicator.produce({
             "type": "create", "docId": req.docId, "shardId": config.SHARD_ID,
             "text": doc.text, "ts": time.time(),
@@ -167,14 +168,14 @@ async def rpc_op(req: OpReq):
     _require_primary()
     doc = await node.store.get_or_create(req.docId)
     async with doc.lock:
-        # Idempotency: a retried op (e.g. after failover) must not double-apply.
+        # Idempotência: uma op reenviada (ex.: após failover) não pode aplicar duas vezes.
         if req.opId in doc.seen_op_ids:
             for e in reversed(doc.oplog):
                 if e.get("opId") == req.opId:
                     return {"seq": e["seq"], "transformedOp": e["op"], "duplicate": True}
             return {"seq": doc.seq, "transformedOp": req.op, "duplicate": True}
 
-        # Rebase the client's op against everything sequenced since its baseVersion.
+        # Rebaseia a op do cliente sobre tudo que foi sequenciado desde seu baseVersion.
         intervening = doc.intervening_ops(req.baseVersion)
         transformed = rebase(req.op, intervening)
 
@@ -185,9 +186,9 @@ async def rpc_op(req: OpReq):
             "op": transformed, "ts": time.time(), "appliedBy": config.NODE_ID,
         }
         doc.append_applied(entry, config.SNAPSHOT_EVERY)
-        # Replicate first (durability), then notify, then ack. Publishing inside
-        # the per-doc lock keeps fan-out order identical to seq order, so clients
-        # rarely see a gap.
+        # Replica primeiro (durabilidade), depois notifica, depois confirma.
+        # Publicar dentro da trava por documento mantém a ordem de difusão igual à
+        # ordem de seq, então os clientes raramente veem um buraco.
         await node.replicator.produce(entry)
         node.jobs.mark_dirty(req.docId, seq)
         await node.redis.publish(doc_channel(req.docId), json.dumps({
@@ -213,7 +214,7 @@ async def rpc_snapshot(req: CreateReq):
 
 
 # --------------------------------------------------------------------------- #
-# RPC: reads (primary or replica)
+# RPC: leituras (primário ou réplica)
 # --------------------------------------------------------------------------- #
 @app.get("/rpc/doc/{doc_id}")
 async def rpc_doc(doc_id: str):
