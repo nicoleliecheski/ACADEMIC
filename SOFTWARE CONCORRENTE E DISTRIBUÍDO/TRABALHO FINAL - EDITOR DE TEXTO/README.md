@@ -100,13 +100,25 @@ curl 'localhost:8080/docs/doc-A?replica=1'   # read served by a replica
 
 ### Simulated clients
 
+Use `python3` (on most Linux distros, including Amazon Linux 2023, there is no
+bare `python`). Install the one dependency first:
+
 ```bash
-pip install -r clients/requirements.txt
-python clients/sim_client.py create   --doc doc-A
-python clients/sim_client.py converge --doc doc-A --clients 5 --ops 12   # consistency proof
-python clients/sim_client.py type     --doc doc-A --client t1 --text "teh quik fox"
-python clients/sim_client.py watch    --doc doc-A --seconds 10           # see annotations
-node   clients/sim_client.js edit     --doc doc-A --client n1 --ops 15   # Node client
+python3 -m pip install --user websockets   # add --break-system-packages if pip refuses
+python3 clients/sim_client.py create   --doc doc-A
+python3 clients/sim_client.py converge --doc doc-A --clients 5 --ops 12   # consistency proof
+python3 clients/sim_client.py type     --doc doc-A --client t1 --text "teh quik fox"
+python3 clients/sim_client.py watch    --doc doc-A --seconds 10           # see annotations
+```
+
+The Node.js client is **optional** (the Python client covers the same behavior;
+`node` is not installed on the host by default since it runs inside containers).
+To use it, install Node and its dependency first:
+
+```bash
+sudo dnf -y install nodejs        # Amazon Linux 2023  (Ubuntu: sudo apt-get install -y nodejs npm)
+( cd clients && npm install )     # installs the 'ws' package
+node clients/sim_client.js edit --doc doc-A --client n1 --ops 15
 ```
 
 ### Demonstrate availability (failover)
@@ -138,7 +150,7 @@ make test    # sequencer ordering, rebase correctness, replica catch-up, idempot
    simulated clients at the instance:
    ```bash
    GW_HTTP=http://<EC2_PUBLIC_IP>:8080 GW_WS=ws://<EC2_PUBLIC_IP>:8081 \
-     python clients/sim_client.py converge --doc doc-A --clients 5 --ops 12
+     python3 clients/sim_client.py converge --doc doc-A --clients 5 --ops 12
    ```
 5. Run `make demo` on the instance to exercise every characteristic end-to-end.
 
