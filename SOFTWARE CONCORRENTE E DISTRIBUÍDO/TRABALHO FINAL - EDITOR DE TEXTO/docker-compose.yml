@@ -1,0 +1,130 @@
+# Shared Document Editor -- full distributed system on one host.
+#
+# Topology: 1 gateway, 2 shards x (primary + replica), 2 spell workers,
+# 1 formatter, Redis. Multiple doc-service containers make partitioning and
+# replication real (not simulated in a single process).
+
+# Explicit lowercase project name. Without this, Compose derives the project name
+# from the directory ("TRABALHO FINAL - EDITOR DE TEXTO"), which yields uppercase
+# image tags and fails with "repository name must be lowercase".
+name: doc-editor
+
+services:
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "no", "--save", ""]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+
+  gateway:
+    build: ./gateway
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_URL: "redis://redis:6379/0"
+      HTTP_PORT: "8080"
+      WS_PORT: "8081"
+      WEBUI_DIR: "/app/webui"
+      GW_SHARDMAP: '{"vnodes":64,"shards":[{"shardId":"sharda","nodes":["sharda-primary:9000","sharda-replica:9000"]},{"shardId":"shardb","nodes":["shardb-primary:9000","shardb-replica:9000"]}]}'
+    ports:
+      - "8080:8080"   # REST API + web UI
+      - "8081:8081"   # WebSocket
+    volumes:
+      - ./webui:/app/webui:ro
+
+  # Service names must be lowercase: Compose tags built images as
+  # <project>-<service> and Docker image names cannot contain uppercase.
+  sharda-primary:
+    build: ./doc_service
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_URL: "redis://redis:6379/0"
+      NODE_ID: "sharda-primary"
+      SHARD_ID: "sharda"
+      ADVERTISE_HOST: "sharda-primary"
+      PORT: "9000"
+      PREFERRED_ROLE: "primary"
+      REPL_MODE: "async"
+
+  sharda-replica:
+    build: ./doc_service
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_URL: "redis://redis:6379/0"
+      NODE_ID: "sharda-replica"
+      SHARD_ID: "sharda"
+      ADVERTISE_HOST: "sharda-replica"
+      PORT: "9000"
+      PREFERRED_ROLE: "replica"
+      REPL_MODE: "async"
+
+  shardb-primary:
+    build: ./doc_service
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_URL: "redis://redis:6379/0"
+      NODE_ID: "shardb-primary"
+      SHARD_ID: "shardb"
+      ADVERTISE_HOST: "shardb-primary"
+      PORT: "9000"
+      PREFERRED_ROLE: "primary"
+      REPL_MODE: "async"
+
+  shardb-replica:
+    build: ./doc_service
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_URL: "redis://redis:6379/0"
+      NODE_ID: "shardb-replica"
+      SHARD_ID: "shardb"
+      ADVERTISE_HOST: "shardb-replica"
+      PORT: "9000"
+      PREFERRED_ROLE: "replica"
+      REPL_MODE: "async"
+
+  worker-spell-1:
+    build: ./workers
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_URL: "redis://redis:6379/0"
+      WORKER: "spell"
+      DICT_PATH: "/app/words.txt"
+    volumes:
+      - ./test-data/words.txt:/app/words.txt:ro
+
+  worker-spell-2:
+    build: ./workers
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_URL: "redis://redis:6379/0"
+      WORKER: "spell"
+      DICT_PATH: "/app/words.txt"
+    volumes:
+      - ./test-data/words.txt:/app/words.txt:ro
+
+  worker-format-1:
+    build: ./workers
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_URL: "redis://redis:6379/0"
+      WORKER: "format"

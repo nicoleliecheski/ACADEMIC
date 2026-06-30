@@ -1,0 +1,35 @@
+// Redis pub/sub bridge (the ASYNCHRONOUS notification path). A dedicated
+// subscriber connection pattern-subscribes to all document channels and listens
+// for cluster events; decoded messages are dispatched to registered handlers.
+
+import { CLUSTER_EVENTS } from "./names.js";
+
+export class RedisBus {
+  constructor(subRedis) {
+    this.sub = subRedis;
+    this.onDocEvent = null;      // (docId, kind, payload) => void
+    this.onClusterEvent = null;  // (payload) => void
+  }
+
+  async start() {
+    // doc:*  matches doc:{id}, doc:{id}:annotations, doc:{id}:presence
+    await this.sub.psubscribe("doc:*");
+    await this.sub.subscribe(CLUSTER_EVENTS);
+
+    this.sub.on("pmessage", (_pattern, channel, message) => {
+      let payload;
+      try { payload = JSON.parse(message); } catch { return; }
+      const parts = channel.split(":"); // ["doc", "{id}", maybe "annotations"]
+      const docId = parts[1];
+      const kind = parts[2] || "op"; // "op" | "annotations" | "presence"
+      if (this.onDocEvent) this.onDocEvent(docId, kind, payload);
+    });
+
+    this.sub.on("message", (channel, message) => {
+      if (channel !== CLUSTER_EVENTS) return;
+      let payload;
+      try { payload = JSON.parse(message); } catch { return; }
+      if (this.onClusterEvent) this.onClusterEvent(payload);
+    });
+  }
+}

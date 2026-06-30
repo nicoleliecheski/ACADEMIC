@@ -1,0 +1,5 @@
+Meeting notes for the distributed systems project.
+
+teh team will meet on monday to discuss the quik design of the document editor.
+we need to test concurrent editing  with many clients and verify consistency.
+the spell checker shoud flag misspelled words like helo and recieve.
