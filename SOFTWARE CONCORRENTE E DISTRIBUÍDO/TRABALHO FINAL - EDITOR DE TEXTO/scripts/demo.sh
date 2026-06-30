@@ -18,7 +18,16 @@ note() { printf '\033[0;33m%s\033[0m\n' "$1"; }
 # --- prerequisites ----------------------------------------------------------
 if ! "$PY" -c "import websockets" 2>/dev/null; then
   note "installing 'websockets' for the simulated clients..."
-  "$PY" -m pip install --quiet -r clients/requirements.txt
+  if ! "$PY" -m pip --version >/dev/null 2>&1; then
+    echo "ERROR: pip is not available for '$PY'. Install it first, then re-run 'make demo':" >&2
+    echo "  Amazon Linux:  sudo dnf -y install python3-pip" >&2
+    echo "  Ubuntu/Debian: sudo apt-get install -y python3-pip" >&2
+    exit 1
+  fi
+  # --user keeps it out of system site-packages; the second form handles
+  # PEP 668 'externally managed environment' (Amazon Linux 2023, Debian 12+).
+  "$PY" -m pip install --user --quiet websockets \
+    || "$PY" -m pip install --user --break-system-packages --quiet websockets
 fi
 
 hr "0. Wait for the cluster to be healthy"

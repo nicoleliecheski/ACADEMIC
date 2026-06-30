@@ -14,18 +14,22 @@ BUILDX_VERSION="v0.17.1"
 
 if command -v dnf >/dev/null 2>&1; then        # Amazon Linux 2023 / Fedora
   sudo dnf -y update
-  sudo dnf -y install docker git make
+  sudo dnf -y install docker git make python3-pip
   sudo systemctl enable --now docker
   sudo usermod -aG docker "$USER"
 elif command -v apt-get >/dev/null 2>&1; then  # Ubuntu / Debian
   sudo apt-get update
-  sudo apt-get install -y docker.io git make
+  sudo apt-get install -y docker.io git make python3-pip
   sudo systemctl enable --now docker
   sudo usermod -aG docker "$USER"
 else
   echo "unsupported package manager; install Docker + Compose manually" >&2
   exit 1
 fi
+
+# Simulated demo clients (run on the host) need the 'websockets' package.
+python3 -m pip install --user websockets \
+  || python3 -m pip install --user --break-system-packages websockets || true
 
 # --- Install current Compose + buildx CLI plugins (system-wide) --------------
 case "$(uname -m)" in
