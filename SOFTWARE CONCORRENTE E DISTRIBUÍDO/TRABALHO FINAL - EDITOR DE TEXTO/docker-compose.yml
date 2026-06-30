@@ -4,6 +4,11 @@
 # 1 formatter, Redis. Multiple doc-service containers make partitioning and
 # replication real (not simulated in a single process).
 
+# Explicit lowercase project name. Without this, Compose derives the project name
+# from the directory ("TRABALHO FINAL - EDITOR DE TEXTO"), which yields uppercase
+# image tags and fails with "repository name must be lowercase".
+name: doc-editor
+
 services:
   redis:
     image: redis:7-alpine
