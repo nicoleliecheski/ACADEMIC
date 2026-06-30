@@ -1,0 +1,123 @@
+# Shared Document Editor -- full distributed system on one host.
+#
+# Topology: 1 gateway, 2 shards x (primary + replica), 2 spell workers,
+# 1 formatter, Redis. Multiple doc-service containers make partitioning and
+# replication real (not simulated in a single process).
+
+services:
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "no", "--save", ""]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+
+  gateway:
+    build: ./gateway
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_URL: "redis://redis:6379/0"
+      HTTP_PORT: "8080"
+      WS_PORT: "8081"
+      WEBUI_DIR: "/app/webui"
+      GW_SHARDMAP: '{"vnodes":64,"shards":[{"shardId":"shardA","nodes":["shardA-primary:9000","shardA-replica:9000"]},{"shardId":"shardB","nodes":["shardB-primary:9000","shardB-replica:9000"]}]}'
+    ports:
+      - "8080:8080"   # REST API + web UI
+      - "8081:8081"   # WebSocket
+    volumes:
+      - ./webui:/app/webui:ro
+
+  shardA-primary:
+    build: ./doc_service
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_URL: "redis://redis:6379/0"
+      NODE_ID: "shardA-primary"
+      SHARD_ID: "shardA"
+      ADVERTISE_HOST: "shardA-primary"
+      PORT: "9000"
+      PREFERRED_ROLE: "primary"
+      REPL_MODE: "async"
+
+  shardA-replica:
+    build: ./doc_service
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_URL: "redis://redis:6379/0"
+      NODE_ID: "shardA-replica"
+      SHARD_ID: "shardA"
+      ADVERTISE_HOST: "shardA-replica"
+      PORT: "9000"
+      PREFERRED_ROLE: "replica"
+      REPL_MODE: "async"
+
+  shardB-primary:
+    build: ./doc_service
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_URL: "redis://redis:6379/0"
+      NODE_ID: "shardB-primary"
+      SHARD_ID: "shardB"
+      ADVERTISE_HOST: "shardB-primary"
+      PORT: "9000"
+      PREFERRED_ROLE: "primary"
+      REPL_MODE: "async"
+
+  shardB-replica:
+    build: ./doc_service
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_URL: "redis://redis:6379/0"
+      NODE_ID: "shardB-replica"
+      SHARD_ID: "shardB"
+      ADVERTISE_HOST: "shardB-replica"
+      PORT: "9000"
+      PREFERRED_ROLE: "replica"
+      REPL_MODE: "async"
+
+  worker-spell-1:
+    build: ./workers
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_URL: "redis://redis:6379/0"
+      WORKER: "spell"
+      DICT_PATH: "/app/words.txt"
+    volumes:
+      - ./test-data/words.txt:/app/words.txt:ro
+
+  worker-spell-2:
+    build: ./workers
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_URL: "redis://redis:6379/0"
+      WORKER: "spell"
+      DICT_PATH: "/app/words.txt"
+    volumes:
+      - ./test-data/words.txt:/app/words.txt:ro
+
+  worker-format-1:
+    build: ./workers
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_URL: "redis://redis:6379/0"
+      WORKER: "format"

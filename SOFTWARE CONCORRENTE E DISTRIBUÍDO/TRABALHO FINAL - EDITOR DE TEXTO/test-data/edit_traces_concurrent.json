@@ -1,0 +1,19 @@
+{
+  "description": "Two clients editing from the same baseVersion=0 over text 'the fox'. Server sequences c1 first; c2 is rebased over c1. Expected convergent text: 'the quick brown fox'.",
+  "baseText": "the fox",
+  "clients": [
+    {
+      "clientId": "c1",
+      "ops": [
+        { "baseVersion": 0, "op": { "kind": "insert", "pos": 4, "text": "quick " }, "opId": "c1:1" }
+      ]
+    },
+    {
+      "clientId": "c2",
+      "ops": [
+        { "baseVersion": 0, "op": { "kind": "insert", "pos": 4, "text": "brown " }, "opId": "c2:1" }
+      ]
+    }
+  ],
+  "expectedFinalText": "the quick brown fox"
+}

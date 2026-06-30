@@ -28,3 +28,127 @@ The elaboration of the specific application scenario, including requirements and
 - **Create a representative demonstration scenario that allows systematically exercising the system's characteristics.**
 - **Execute the demonstration using the AWS cloud (EC2).**
 - **Artifacts to be delivered: source code (and executables); documentation (of architecture and implementation); usage instructions (readme); and test data.**
+
+---
+
+# Implementation: Shared Collaborative Document Editor
+
+A document editor where many remote clients view and edit the same documents at
+once. Edits are streamed live to every participant over WebSocket, and Python
+background workers (spell-check, formatter) annotate the text concurrently with
+editing. The system is built from custom distributed components in **two
+languages** (Node.js + Python) coordinated through **Redis**.
+
+* Architecture: [`docs/architecture.md`](docs/architecture.md)
+* Implementation details / wire protocol: [`docs/implementation.md`](docs/implementation.md)
+
+## How the required characteristics are met
+
+| Requirement | Where |
+|-------------|-------|
+| Multiple Internet clients | Gateway REST (`:8080`) + WebSocket (`:8081`) |
+| Several custom distributed components | Node gateway, Python doc-service (primary/replica), Python workers, lease coordinator |
+| Concurrent access to shared data | Many clients editing one doc; per-doc lock + sequencer |
+| Server-side processing concurrent with access | Spell-check/format worker pools (Redis Streams consumer groups) |
+| Synchronous **and** asynchronous interaction | Blocking REST + gateway→primary RPC; WebSocket + Redis Pub/Sub + Streams |
+| Replication **and** partitioning | Consistent-hash shards; primary→replica op-log stream; separate worker pools |
+| Consistency **and** availability | Central sequencer + op-log + rebase; lease failover + write retry |
+| >1 language, multiple paradigms | Node + Python; client-server, pub/sub, messaging |
+
+## Architecture at a glance
+
+```
+clients ──WS(async)/REST(sync)──> Node gateway ──RPC──> Python doc-service
+                                       │  ▲                 (shardA/B: primary⇄replica)
+                                       │  └── Redis Pub/Sub ──┐ op.applied / annotations
+                                       └── shard router        │
+Python workers <── Redis Streams (jobs) ── doc-service ────────┘
+Redis: pub/sub, streams, shard map, primary leases
+```
+
+## Prerequisites
+
+* Docker + Docker Compose v2 (`docker compose`).
+* For the simulated clients / demo on the host: Python 3.9+ with the
+  `websockets` package (`pip install -r clients/requirements.txt`). The demo
+  script installs it automatically if missing.
+
+## Run locally
+
+```bash
+make up        # build images, start the cluster, wait until healthy
+make ps        # see all containers
+make cluster   # show live primary/replica roles per shard
+make demo      # run the full narrated demonstration scenario
+make down      # stop everything
+```
+
+Then open the web UI at <http://localhost:8080>. Open it in **two browser tabs**
+with the same Doc id (e.g. `doc-A`) and type in both to see live collaboration,
+plus spell-check/formatter annotations in the side panel.
+
+### Useful endpoints
+
+```bash
+curl localhost:8080/health
+curl localhost:8080/shardmap
+curl localhost:8080/cluster            # who is primary/replica right now
+curl -X POST localhost:8080/docs -H 'content-type: application/json' -d '{"docId":"doc-A"}'
+curl localhost:8080/docs/doc-A
+curl 'localhost:8080/docs/doc-A?replica=1'   # read served by a replica
+```
+
+### Simulated clients
+
+```bash
+pip install -r clients/requirements.txt
+python clients/sim_client.py create   --doc doc-A
+python clients/sim_client.py converge --doc doc-A --clients 5 --ops 12   # consistency proof
+python clients/sim_client.py type     --doc doc-A --client t1 --text "teh quik fox"
+python clients/sim_client.py watch    --doc doc-A --seconds 10           # see annotations
+node   clients/sim_client.js edit     --doc doc-A --client n1 --ops 15   # Node client
+```
+
+### Demonstrate availability (failover)
+
+```bash
+scripts/kill_primary.sh shardA   # kills the current primary; a replica is promoted
+make cluster                     # confirm the new primary
+# editing continues with continuous seq and no lost ops
+```
+
+## Run the unit/integration tests
+
+```bash
+make test    # sequencer ordering, rebase correctness, replica catch-up, idempotency
+```
+
+## Deploy on AWS EC2
+
+1. Launch an EC2 instance (Amazon Linux 2023 or Ubuntu, t3.small+).
+2. **Security group inbound:** TCP `8080` (REST + UI) and `8081` (WebSocket) from
+   your IP (or `0.0.0.0/0` for an open demo). Keep `6379` and `9000` closed —
+   Redis and the shard nodes stay on the internal Docker network.
+3. Install Docker + Compose, copy this project to the instance, then:
+   ```bash
+   cd "TRABALHO FINAL - EDITOR DE TEXTO"
+   make up
+   ```
+4. From your laptop, browse to `http://<EC2_PUBLIC_IP>:8080`. To point the
+   simulated clients at the instance:
+   ```bash
+   GW_HTTP=http://<EC2_PUBLIC_IP>:8080 GW_WS=ws://<EC2_PUBLIC_IP>:8081 \
+     python clients/sim_client.py converge --doc doc-A --clients 5 --ops 12
+   ```
+5. Run `make demo` on the instance to exercise every characteristic end-to-end.
+
+Because all coordination (leases, shard map, replication log) lives in Redis, the
+shards/replicas/workers can later be split across several EC2 instances pointed
+at a shared Redis, with a load balancer in front of multiple gateways.
+
+## Repository layout
+
+See [`docs/implementation.md`](docs/implementation.md) for a full source map.
+Top level: `gateway/` (Node), `doc_service/` (Python), `workers/` (Python),
+`webui/`, `clients/`, `scripts/`, `test-data/`, `docs/`, `docker-compose.yml`,
+`Makefile`.
