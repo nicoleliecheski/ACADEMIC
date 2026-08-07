@@ -2,8 +2,11 @@
 // O grafos esta armazenado em arquivo do tipo .g6
 // Quando ha mais de um grafo em um arquivo ele interage apenas com o primeiro
 // Utiliza funcoes dos cabecalhos personalizados "subset.h" e "graphio.h"
-// Para compilar utilize o comando "g++ -o Conjuntos_RED_LD Conjuntos_RED_LD.cpp subset.cpp graphio.o"
-// Para executar utilize o comando "./Conjuntos_RED_LD <nome do arquivo>.g6"
+// Para compilar:
+// 1. gcc -c graphio.c -o graphio.o
+// 2. g++ -o Conjuntos_RED_LD Conjuntos_RED_LD.cpp subset.cpp graphio.o
+// Para executar:
+// 1. ./Conjuntos_RED_LD <nome do arquivo>.g6
 
 #include <iostream>
 #include <vector>

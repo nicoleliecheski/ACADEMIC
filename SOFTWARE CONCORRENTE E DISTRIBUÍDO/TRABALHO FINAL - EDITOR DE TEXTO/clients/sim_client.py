@@ -1,26 +1,4 @@
-#!/usr/bin/env python3
-"""Cliente simulado para o editor de documentos compartilhado.
-
-Exercita o sistema como navegadores reais fariam, porém de forma programada para
-que os cenários de demonstração sejam reproduzíveis. Usa o caminho WebSocket
-para edição ao vivo (assíncrono) e o caminho REST para criar/abrir/snapshot
-(síncrono).
-
-Subcomandos:
-  create    POST /docs (síncrono)
-  type      conecta, entra e digita uma string literal caractere a caractere (demo do corretor)
-  edit      conecta, entra e envia N ops aleatórias de inserção/remoção
-  converge  cria N editores concorrentes em um doc e verifica que todos os
-            clientes e o servidor concordam no mesmo texto + seq (prova de consistência)
-  get       GET /docs/{id} (opcionalmente a partir de uma réplica)
-  watch     conecta e imprime os eventos recebidos (anotações, presença, ops)
-
-Ambiente: GW_HTTP (padrão http://localhost:8080), GW_WS (padrão ws://localhost:8081).
-Requer o pacote `websockets` (pip install -r clients/requirements.txt).
-"""
-
 from __future__ import annotations
-
 import argparse
 import asyncio
 import json
@@ -29,18 +7,14 @@ import random
 import string
 import sys
 import urllib.request
-
 import websockets
 
 GW_HTTP = os.environ.get("GW_HTTP", "http://localhost:8080")
 GW_WS = os.environ.get("GW_WS", "ws://localhost:8081")
 
-WORDS = ["alfa", "beta", "gama", "delta", "dados", "texto", "editar", "linha",
-         "mesclar", "rápido", "cliente", "servidor", "documento", "mundo",
-         "olá", "nó"]
+WORDS = ["alfa", "beta", "gama", "delta", "dados", "texto", "editar", "linha", "mesclar", "rápido", "cliente", "servidor", "documento", "mundo", "olá", "nó"]
 
 
-# --- auxiliares ------------------------------------------------------------- #
 def apply_op(text: str, op: dict) -> str:
     pos = max(0, min(int(op["pos"]), len(text)))
     if op["kind"] == "insert":
@@ -59,7 +33,6 @@ def rest(method: str, path: str, body: dict | None = None) -> dict:
 
 
 class Editor:
-    """Uma sessão de edição via WebSocket que acompanha o texto autoritativo do servidor."""
 
     def __init__(self, doc_id: str, client_id: str):
         self.doc_id = doc_id
@@ -91,10 +64,9 @@ class Editor:
                     self.text = apply_op(self.text, msg["transformedOp"])
                     self.seq = seq
                 elif seq > self.seq + 1:
-                    # Buraco detectado -> backfill síncrono e segue em frente.
                     await self._resync_rest()
             elif t == "annotation":
-                pass  # editores ignoram; o comando `watch` é quem imprime
+                pass 
 
     async def _resync_rest(self):
         doc = await asyncio.to_thread(rest, "GET", f"/docs/{self.doc_id}")
@@ -122,7 +94,6 @@ def random_op(text: str) -> dict:
     return {"kind": "insert", "pos": pos, "text": random.choice(WORDS) + " "}
 
 
-# --- subcomandos ------------------------------------------------------------ #
 async def cmd_create(args):
     out = rest("POST", "/docs", {"docId": args.doc, "initialText": args.text or ""})
     print(f"criado {out['docId']} no {out['shardId']} seq={out['seq']}")
@@ -190,7 +161,6 @@ async def cmd_get(args):
 
 async def cmd_watch(args):
     ed = Editor(args.doc, args.client)
-    # Sobrescreve o recebimento para imprimir tudo.
     ed.ws = await websockets.connect(GW_WS, max_size=4 * 1024 * 1024)
     await ed.ws.send(json.dumps({"type": "join", "docId": args.doc, "clientId": args.client}))
     print(f"[{args.client}] observando {args.doc} por {args.seconds}s ...")

@@ -1,35 +1,21 @@
-"""Enfileirador de jobs de segundo plano (mensageria via Redis Streams).
-
-Quando o primário aplica operações, ele marca o documento como "sujo". Um
-flusher periódico agrupa edições rápidas e enfileira um job de verificação
-ortográfica e um de formatação por documento sujo em
-``jobs:spellcheck`` / ``jobs:format``. Os pools de workers consomem esses jobs
-concorrentemente com a edição em andamento (requisito: processamento no servidor
-concorrente com o acesso dos clientes).
-"""
-
 from __future__ import annotations
-
 import asyncio
 import json
 import logging
 from typing import Dict
-
 import redis.asyncio as aioredis
-
 from config import config
 from names import JOBS_FORMAT, JOBS_SPELLCHECK
 from store import DocStore
 
 log = logging.getLogger("jobs")
 
-
 class JobEnqueuer:
     def __init__(self, redis: aioredis.Redis, store: DocStore):
         self.redis = redis
         self.store = store
-        self._dirty: Dict[str, int] = {}     # docId -> seq quando marcado sujo
-        self._flushed: Dict[str, int] = {}    # docId -> seq do último enfileiramento
+        self._dirty: Dict[str, int] = {}     
+        self._flushed: Dict[str, int] = {}   
         self._task = None
         self._stop = asyncio.Event()
         self._job_seq = 0
@@ -49,7 +35,7 @@ class JobEnqueuer:
         while not self._stop.is_set():
             try:
                 await self._flush_once()
-            except Exception as exc:  # pragma: no cover - transitório
+            except Exception as exc:  
                 log.warning("flush error: %s", exc)
             try:
                 await asyncio.wait_for(self._stop.wait(), timeout=config.JOB_FLUSH_INTERVAL)

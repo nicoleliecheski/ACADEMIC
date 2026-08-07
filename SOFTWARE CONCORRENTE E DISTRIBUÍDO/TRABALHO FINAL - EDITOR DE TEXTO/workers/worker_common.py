@@ -1,10 +1,3 @@
-"""Infraestrutura compartilhada de grupos de consumidores do Redis Streams.
-
-Workers no mesmo grupo dividem as entradas de um stream entre si (consumo
-concorrente, entrega ao-menos-uma-vez). ``XACK`` confirma o processamento;
-``XAUTOCLAIM`` recupera entradas cujo worker caiu no meio do processamento.
-"""
-
 from __future__ import annotations
 
 import asyncio
@@ -32,7 +25,6 @@ async def ensure_group(redis: aioredis.Redis, stream: str, group: str) -> None:
 
 
 async def run_consumer(stream: str, group: str, handler: Handler) -> None:
-    """Consome ``stream`` no ``group`` indefinidamente, despachando cada job para ``handler``."""
     redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
     consumer = f"{group}-{socket.gethostname()}-{os.getpid()}"
     redis = aioredis.from_url(redis_url, decode_responses=True)
@@ -48,16 +40,15 @@ async def run_consumer(stream: str, group: str, handler: Handler) -> None:
                 for msg_id, fields in entries:
                     await _dispatch(redis, stream, group, msg_id, fields, handler)
 
-            # Periodicamente recupera entradas abandonadas por workers que caíram.
             claimed = await redis.xautoclaim(stream, group, consumer,
                                               min_idle_time=10000, start=last_autoclaim, count=10)
             if claimed and claimed[1]:
                 last_autoclaim = claimed[0]
                 for msg_id, fields in claimed[1]:
                     await _dispatch(redis, stream, group, msg_id, fields, handler)
-        except asyncio.CancelledError:  # pragma: no cover
+        except asyncio.CancelledError:  
             raise
-        except Exception as exc:  # pragma: no cover - mantém o worker vivo
+        except Exception as exc: 
             log.warning("consumer loop error: %s", exc)
             await asyncio.sleep(0.5)
 
@@ -69,8 +60,7 @@ async def _dispatch(redis, stream, group, msg_id, fields, handler) -> None:
         return
     try:
         await handler(json.loads(raw))
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  
         log.warning("handler error on %s: %s", msg_id, exc)
     finally:
-        # Ao-menos-uma-vez: confirma após processar (queda antes do ack -> reprocessa).
         await redis.xack(stream, group, msg_id)

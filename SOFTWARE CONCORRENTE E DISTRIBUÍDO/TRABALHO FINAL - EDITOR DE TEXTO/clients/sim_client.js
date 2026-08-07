@@ -1,9 +1,3 @@
-#!/usr/bin/env node
-// Cliente simulado mínimo em Node.js (paridade WS com sim_client.py).
-// Uso: node sim_client.js edit --doc doc-A --client n1 --ops 15
-//      node sim_client.js type --doc doc-A --client n1 --text "ola mundo"
-// Requer o pacote `ws` (instalado na imagem do gateway, ou `npm install`).
-
 import WebSocket from "ws";
 
 const GW_WS = process.env.GW_WS || "ws://localhost:8081";

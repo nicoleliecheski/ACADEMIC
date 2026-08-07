@@ -1,23 +1,14 @@
-// Interface mínima do editor colaborativo.
-//
-// As edições ao vivo usam o caminho WebSocket; abrir/salvar usam REST. Para
-// manter a UI simples, o cliente aplica operações remotas de forma otimista e
-// recorre a um resync síncrono via REST sempre que detecta um buraco na
-// sequência (auto-recuperação). A garantia *rigorosa* de convergência é provada
-// pelo comando `converge` de clients/sim_client.py — esta página é para
-// demonstração visual a humanos.
-
 const $ = (id) => document.getElementById(id);
-const REST = location.origin;                         // o mesmo host serve REST + UI
+const REST = location.origin;                         
 const WS_URL = `ws://${location.hostname}:8081`;
 
 let ws = null;
 let docId = null;
 let clientId = null;
 let serverSeq = 0;
-let lastText = "";          // último texto com o qual reconciliamos
+let lastText = "";          
 let opCounter = 0;
-let applyingRemote = false; // trava para edições remotas não ecoarem como novas ops
+let applyingRemote = false; 
 const presence = new Map();
 
 function setStatus(connected) {
@@ -33,7 +24,6 @@ function applyOp(text, op) {
   return text.slice(0, pos) + text.slice(end);
 }
 
-// Deriva uma única op de inserção/remoção comparando old->new por prefixo/sufixo comum.
 function diffToOp(oldText, newText) {
   if (oldText === newText) return null;
   let start = 0;
@@ -47,9 +37,7 @@ function diffToOp(oldText, newText) {
   const added = newText.slice(start, endNew);
   if (added && !removed) return { kind: "insert", pos: start, text: added };
   if (removed && !added) return { kind: "delete", pos: start, len: removed.length };
-  // Substituição: modela como remoção seguida de inserção (duas ops).
-  return [{ kind: "delete", pos: start, len: removed.length },
-          { kind: "insert", pos: start, text: added }];
+  return [{ kind: "delete", pos: start, len: removed.length }, { kind: "insert", pos: start, text: added }];
 }
 
 function sendOp(op) {
@@ -98,12 +86,12 @@ function onMessage(raw) {
       break;
     case "op.applied":
       if (msg.clientId === clientId && msg.seq === serverSeq + 1) {
-        serverSeq = msg.seq;                 // eco da nossa própria op
+        serverSeq = msg.seq;                 
       } else if (msg.seq === serverSeq + 1) {
         setEditorText(applyOp($("editor").value, msg.transformedOp));
         serverSeq = msg.seq;
       } else if (msg.seq > serverSeq + 1) {
-        resyncRest();                        // buraco na sequência -> backfill síncrono
+        resyncRest();                        
       }
       $("seq").textContent = `seq ${serverSeq}`;
       break;
@@ -159,7 +147,6 @@ $("snapshotBtn").addEventListener("click", async () => {
 });
 $("editor").addEventListener("input", onEditorInput);
 
-// Conecta automaticamente se ?doc= / ?client= estiverem presentes na URL.
 const params = new URLSearchParams(location.search);
 if (params.get("doc")) $("docId").value = params.get("doc");
 if (params.get("client")) $("clientId").value = params.get("client");

@@ -1,12 +1,3 @@
-# Shared Document Editor -- full distributed system on one host.
-#
-# Topology: 1 gateway, 2 shards x (primary + replica), 2 spell workers,
-# 1 formatter, Redis. Multiple doc-service containers make partitioning and
-# replication real (not simulated in a single process).
-
-# Explicit lowercase project name. Without this, Compose derives the project name
-# from the directory ("TRABALHO FINAL - EDITOR DE TEXTO"), which yields uppercase
-# image tags and fails with "repository name must be lowercase".
 name: doc-editor
 
 services:
@@ -33,13 +24,11 @@ services:
       WEBUI_DIR: "/app/webui"
       GW_SHARDMAP: '{"vnodes":64,"shards":[{"shardId":"sharda","nodes":["sharda-primary:9000","sharda-replica:9000"]},{"shardId":"shardb","nodes":["shardb-primary:9000","shardb-replica:9000"]}]}'
     ports:
-      - "8080:8080"   # REST API + web UI
-      - "8081:8081"   # WebSocket
+      - "8080:8080"   
+      - "8081:8081" 
     volumes:
       - ./webui:/app/webui:ro
 
-  # Service names must be lowercase: Compose tags built images as
-  # <project>-<service> and Docker image names cannot contain uppercase.
   sharda-primary:
     build: ./doc_service
     depends_on:

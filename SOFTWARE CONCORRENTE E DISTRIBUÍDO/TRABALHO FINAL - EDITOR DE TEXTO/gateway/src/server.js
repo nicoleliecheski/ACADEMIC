@@ -1,20 +1,9 @@
-// Serviço de gateway / borda.
-//   * API REST (síncrona, bloqueante) na HTTP_PORT -> create/open/ops/snapshot/save
-//   * WebSocket (assíncrono, ao vivo)  na WS_PORT   -> edição ao vivo + notificações
-//   * ponte de pub/sub do Redis        -> repassa op.applied / annotations aos clientes WS
-//   * roteador de shards               -> particionamento + resolução do primário / failover
-//
-// Duas linguagens se encontram aqui: esta borda em Node fala HTTP/JSON com os
-// nós do serviço de documentos em Python e compartilha o Redis com os workers
-// em Python.
-
 import http from "node:http";
 import path from "node:path";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import express from "express";
 import Redis from "ioredis";
-
 import { Router } from "./router.js";
 import { RpcClient } from "./rpcClient.js";
 import { RedisBus } from "./redisBus.js";
@@ -24,22 +13,14 @@ import { SHARDMAP } from "./names.js";
 const HTTP_PORT = parseInt(process.env.HTTP_PORT || "8080", 10);
 const WS_PORT = parseInt(process.env.WS_PORT || "8081", 10);
 const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379/0";
-const WEBUI_DIR = process.env.WEBUI_DIR ||
-  path.resolve(fileURLToPath(new URL("../../webui", import.meta.url)));
-
+const WEBUI_DIR = process.env.WEBUI_DIR || path.resolve(fileURLToPath(new URL("../../webui", import.meta.url)));
 const log = (...a) => console.log(new Date().toISOString(), ...a);
-
-// --- Conexões Redis (comando, publicação e assinatura devem ser separadas) --
 const redis = new Redis(REDIS_URL);
 const pub = new Redis(REDIS_URL);
 const sub = new Redis(REDIS_URL);
-
 const router = new Router(redis);
 const rpc = new RpcClient(router);
 
-// Semeia um mapa de shards padrão no primeiro boot, se nenhum existir.
-// GW_SHARDMAP é uma string JSON descrevendo os shards e os endereços dos seus
-// nós (veja o docker-compose).
 async function ensureShardMap() {
   const existing = await redis.get(SHARDMAP);
   if (existing) return;
@@ -49,9 +30,6 @@ async function ensureShardMap() {
   log("[BOOT] seeded shardmap from GW_SHARDMAP");
 }
 
-// --------------------------------------------------------------------------- //
-// API REST (caminho síncrono / bloqueante)
-// --------------------------------------------------------------------------- //
 const app = express();
 app.use(express.json());
 app.use(express.static(WEBUI_DIR));
@@ -62,7 +40,6 @@ app.get("/shardmap", async (_req, res) => {
   res.json({ shards: router.shards, ring: router.ring.length });
 });
 
-// Visão agregada do cluster: quem é primário/réplica por shard neste momento.
 app.get("/cluster", async (_req, res) => {
   const out = [];
   for (const shard of router.shards) {
@@ -121,7 +98,6 @@ app.post("/docs/:id/snapshot", async (req, res) => {
   }
 });
 
-// "save" é um alias voltado ao cliente que força um snapshot durável.
 app.post("/docs/:id/save", async (req, res) => {
   log(`[SYNC] POST /docs/${req.params.id}/save`);
   try {
@@ -131,19 +107,12 @@ app.post("/docs/:id/save", async (req, res) => {
   }
 });
 
-// --------------------------------------------------------------------------- //
-// Servidor WebSocket (caminho assíncrono / ao vivo)
-// --------------------------------------------------------------------------- //
 const wsServer = http.createServer();
 const hub = new WsHub({ server: wsServer, rpc, pubRedis: pub, log });
-
-// --------------------------------------------------------------------------- //
-// Bus do Redis -> difusão para o WS
-// --------------------------------------------------------------------------- //
 const bus = new RedisBus(sub);
 bus.onDocEvent = (docId, kind, payload) => {
   if (kind === "annotations") hub.broadcast(docId, { ...payload, type: "annotation" });
-  else hub.broadcast(docId, payload); // op.applied / presence passam direto
+  else hub.broadcast(docId, payload); 
 };
 bus.onClusterEvent = (payload) => {
   if (payload.type === "primary.changed") {
@@ -152,9 +121,6 @@ bus.onClusterEvent = (payload) => {
   }
 };
 
-// --------------------------------------------------------------------------- //
-// Boot
-// --------------------------------------------------------------------------- //
 async function main() {
   await ensureShardMap();
   await router.loadShardMap();

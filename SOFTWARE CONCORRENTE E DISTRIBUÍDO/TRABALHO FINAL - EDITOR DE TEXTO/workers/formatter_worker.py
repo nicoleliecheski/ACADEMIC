@@ -1,12 +1,3 @@
-"""Worker de formatação.
-
-Consome ``jobs:format`` (grupo de consumidores ``formatters``) e gera sugestões
-leves de formatação (espaços duplos, espaço ao fim da linha, frases que não
-começam com maiúscula, prováveis títulos). Demonstra o particionamento
-*funcional*: um pool de workers separado, em um stream separado, executando de
-forma concorrente com os corretores ortográficos e com a edição ao vivo.
-"""
-
 from __future__ import annotations
 
 import asyncio
@@ -32,7 +23,6 @@ _pub = aioredis.from_url(REDIS_URL, decode_responses=True)
 
 DOUBLE_SPACE = re.compile(r"  +")
 TRAILING_WS = re.compile(r"[ \t]+$", re.MULTILINE)
-# Início de frase: aceita minúsculas acentuadas (à-ÿ) além de a-z.
 SENTENCE_START = re.compile(r"(?:^|[.!?]\s+)([a-zà-ÿ])")
 
 

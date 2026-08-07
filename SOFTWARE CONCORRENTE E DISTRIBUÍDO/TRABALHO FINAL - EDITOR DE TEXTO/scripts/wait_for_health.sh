@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-# Block until the gateway is healthy and the shard map is loaded.
 set -euo pipefail
 
 GW="${GW_HTTP:-http://localhost:8080}"

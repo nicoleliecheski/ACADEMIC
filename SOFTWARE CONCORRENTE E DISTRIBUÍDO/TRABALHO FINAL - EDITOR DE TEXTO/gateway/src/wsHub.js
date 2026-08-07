@@ -1,13 +1,9 @@
-// Hub de WebSocket: salas por documento, tratamento das mensagens dos clientes e
-// difusão dos eventos vindos do Redis para os sockets conectados. Esta é a borda
-// ao vivo e assíncrona à qual navegadores e clientes simulados se conectam.
-
 import { WebSocketServer } from "ws";
 import { presenceChannel } from "./names.js";
 
 export class WsHub {
   constructor({ server, rpc, pubRedis, log }) {
-    this.rooms = new Map();        // docId -> Set<ws>
+    this.rooms = new Map();        
     this.rpc = rpc;
     this.pub = pubRedis;
     this.log = log;
@@ -49,9 +45,6 @@ export class WsHub {
     this.rooms.get(msg.docId).add(ws);
     this.log(`WS join doc=${msg.docId} client=${msg.clientId}`);
 
-    // Envia um snapshot autoritativo completo para o cliente sincronizar (join
-    // ASSÍNCRONO, apoiado por uma leitura RPC SÍNCRONA por baixo). Cria o
-    // documento automaticamente se um cliente abrir um que ainda não existe.
     try {
       let doc;
       try {
@@ -68,9 +61,6 @@ export class WsHub {
   }
 
   async _op(ws, msg) {
-    // Encaminha ao primário do shard. O op.applied resultante volta a TODOS os
-    // clientes via Redis pub/sub (veja a fiação do bus em server.js), então não
-    // ecoamos aqui.
     try {
       await this.rpc.write("op", msg.docId, {
         docId: msg.docId,
@@ -100,7 +90,6 @@ export class WsHub {
     }
   }
 
-  // Chamado pelo bus do Redis quando um evento chega para um documento.
   broadcast(docId, obj) {
     const room = this.rooms.get(docId);
     if (!room) return;

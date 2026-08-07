@@ -1,31 +1,14 @@
-"""Nó do serviço de documentos (FastAPI).
-
-Um processo = um nó de shard. Seu papel (primário vs réplica) é dinâmico e
-definido pela posse do lease. O gateway chama os endpoints ``/rpc/*`` deste nó
-por HTTP/JSON (o caminho de interação síncrono). O primário é o único escritor
-autoritativo dos documentos do seu shard:
-
-    op  ->  trava por documento  ->  atribui seq  ->  rebaseia  ->  aplica
-        ->  acrescenta ao log + replica (XADD)  ->  publica op.applied  ->  ack
-
-As réplicas acompanham o stream de replicação e servem leituras (possivelmente
-defasadas).
-"""
-
 from __future__ import annotations
-
 import asyncio
 import json
 import logging
 import time
 from contextlib import asynccontextmanager
 from typing import Any, Dict
-
 import redis.asyncio as aioredis
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-
 from config import config
 from jobs import JobEnqueuer
 from lease import LeaseManager
@@ -42,7 +25,6 @@ log = logging.getLogger("doc_service")
 
 
 class Node:
-    """Mantém os singletons de vida longa deste processo."""
 
     def __init__(self) -> None:
         self.redis: aioredis.Redis = aioredis.from_url(config.REDIS_URL, decode_responses=True)
@@ -57,8 +39,6 @@ class Node:
 
     async def on_role_change(self, primary: bool) -> None:
         if primary:
-            # Drena a cauda do log de replicação antes de produzir, para nunca
-            # perder ops escritas pelo primário anterior, e então para de consumir.
             await self.replicator.drain()
             await self.replicator.stop_consuming()
             self.jobs.start()
@@ -70,7 +50,6 @@ class Node:
 
     async def startup(self) -> None:
         await self.redis.ping()
-        # As réplicas começam a acompanhar de imediato; o loop do lease pode promover depois.
         self.replicator.start_consuming()
         await self.lease.start()
         log.info("started node addr=%s preferred=%s", config.advertise_addr, config.PREFERRED_ROLE)
@@ -82,7 +61,7 @@ class Node:
         await self.redis.aclose()
 
 
-node: Node  # definido no lifespan
+node: Node 
 
 
 @asynccontextmanager
@@ -99,9 +78,6 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="doc-service", lifespan=lifespan)
 
 
-# --------------------------------------------------------------------------- #
-# Modelos de requisição
-# --------------------------------------------------------------------------- #
 class CreateReq(BaseModel):
     docId: str
     initialText: str = ""
@@ -115,9 +91,6 @@ class OpReq(BaseModel):
     opId: str
 
 
-# --------------------------------------------------------------------------- #
-# Saúde / introspecção
-# --------------------------------------------------------------------------- #
 @app.get("/health")
 async def health():
     return {"ok": True, "shardId": config.SHARD_ID, "nodeId": config.NODE_ID}
@@ -134,12 +107,8 @@ async def role():
     }
 
 
-# --------------------------------------------------------------------------- #
-# RPC: escritas (apenas no primário)
-# --------------------------------------------------------------------------- #
 def _require_primary():
     if not node.is_primary:
-        # 409 diz ao gateway para re-resolver o primário atual e tentar de novo.
         raise HTTPException(status_code=409, detail="not primary for this shard")
 
 
@@ -151,7 +120,6 @@ async def rpc_create(req: CreateReq):
         if req.initialText and doc.seq == 0 and not doc.text:
             doc.snapshot_text = req.initialText
             doc.text = req.initialText
-        # Replica uma entrada de controle para as réplicas também materializarem o doc.
         await node.replicator.produce({
             "type": "create", "docId": req.docId, "shardId": config.SHARD_ID,
             "text": doc.text, "ts": time.time(),
@@ -168,14 +136,12 @@ async def rpc_op(req: OpReq):
     _require_primary()
     doc = await node.store.get_or_create(req.docId)
     async with doc.lock:
-        # Idempotência: uma op reenviada (ex.: após failover) não pode aplicar duas vezes.
         if req.opId in doc.seen_op_ids:
             for e in reversed(doc.oplog):
                 if e.get("opId") == req.opId:
                     return {"seq": e["seq"], "transformedOp": e["op"], "duplicate": True}
             return {"seq": doc.seq, "transformedOp": req.op, "duplicate": True}
 
-        # Rebaseia a op do cliente sobre tudo que foi sequenciado desde seu baseVersion.
         intervening = doc.intervening_ops(req.baseVersion)
         transformed = rebase(req.op, intervening)
 
@@ -186,9 +152,6 @@ async def rpc_op(req: OpReq):
             "op": transformed, "ts": time.time(), "appliedBy": config.NODE_ID,
         }
         doc.append_applied(entry, config.SNAPSHOT_EVERY)
-        # Replica primeiro (durabilidade), depois notifica, depois confirma.
-        # Publicar dentro da trava por documento mantém a ordem de difusão igual à
-        # ordem de seq, então os clientes raramente veem um buraco.
         await node.replicator.produce(entry)
         node.jobs.mark_dirty(req.docId, seq)
         await node.redis.publish(doc_channel(req.docId), json.dumps({
@@ -213,9 +176,6 @@ async def rpc_snapshot(req: CreateReq):
     return {"docId": req.docId, "baseVersion": doc.base_version, "seq": doc.seq}
 
 
-# --------------------------------------------------------------------------- #
-# RPC: leituras (primário ou réplica)
-# --------------------------------------------------------------------------- #
 @app.get("/rpc/doc/{doc_id}")
 async def rpc_doc(doc_id: str):
     doc = node.store.get(doc_id)

@@ -1,17 +1,10 @@
-#!/usr/bin/env python3
-"""Roda todos os testes de unidade/integração sem exigir o pytest.
-
-`make test` usa o pytest quando disponível e recorre a este runner como fallback.
-"""
 import os
 import sys
 import traceback
-
 HERE = os.path.dirname(__file__)
 sys.path.insert(0, os.path.abspath(os.path.join(HERE, "..")))
-
-import test_ops          # noqa: E402
-import test_replication  # noqa: E402
+import test_ops          
+import test_replication  
 
 modules = [test_ops, test_replication]
 total = 0

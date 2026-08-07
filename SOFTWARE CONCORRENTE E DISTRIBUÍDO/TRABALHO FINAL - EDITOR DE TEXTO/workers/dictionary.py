@@ -1,18 +1,8 @@
-"""Dicionário simples de verificação ortográfica com sugestões a distância de
-edição 1.
-
-Carrega uma lista de palavras separadas por linha (``DICT_PATH``, padrão
-``/app/words.txt``). É puro e sem dependências, portanto trivial de testar.
-O alfabeto de sugestões inclui letras acentuadas do português, de modo que
-sugestões como ``você`` possam ser geradas a partir de ``voce``.
-"""
-
 from __future__ import annotations
 
 import os
 from typing import List, Set
 
-# Alfabeto usado para gerar candidatos de correção (inclui acentos do pt-BR).
 _ALPHABET = "abcdefghijklmnopqrstuvwxyzàáâãçéêíóôõú"
 
 
@@ -36,7 +26,6 @@ class Dictionary:
 
     def is_word(self, token: str) -> bool:
         t = token.lower()
-        # Aceita números puros e tokens muito curtos.
         if t.isdigit() or len(t) <= 1:
             return True
         return t in self.words
@@ -52,7 +41,5 @@ class Dictionary:
     def suggest(self, token: str, limit: int = 3) -> List[str]:
         t = token.lower()
         cands = [w for w in self._edits1(t) if w in self.words]
-        # Prioriza sugestões que começam com a mesma letra e, depois, as de
-        # tamanho mais próximo.
         cands.sort(key=lambda w: (w[0] != t[0], abs(len(w) - len(t)), w))
         return cands[:limit]

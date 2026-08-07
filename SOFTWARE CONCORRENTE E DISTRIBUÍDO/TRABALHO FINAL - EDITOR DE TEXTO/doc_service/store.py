@@ -1,35 +1,23 @@
-"""Estado autoritativo de documentos em memória, com log de operações e snapshots.
-
-Um ``DocState`` guarda o texto materializado mais o log de operações desde o
-último snapshot. O ``DocStore`` é dono da coleção de documentos e fornece um
-:class:`asyncio.Lock` por documento, de modo que a aplicação de operações seja
-serializada **por documento** (documentos diferentes prosseguem concorrentemente).
-"""
-
 from __future__ import annotations
-
 import asyncio
 import time
 from typing import Any, Dict, List, Optional
-
 from ops import apply_op, fold
 
 OpLogEntry = Dict[str, Any]
-
 
 class DocState:
     def __init__(self, doc_id: str, shard_id: str):
         self.doc_id = doc_id
         self.shard_id = shard_id
-        self.seq: int = 0                 # último seq global aplicado a este doc
-        self.base_version: int = 0        # seq capturado por snapshot_text
+        self.seq: int = 0                 
+        self.base_version: int = 0        
         self.snapshot_text: str = ""
-        self.text: str = ""               # texto atual materializado
-        self.oplog: List[OpLogEntry] = [] # entradas com seq em (base_version, seq]
+        self.text: str = ""               
+        self.oplog: List[OpLogEntry] = [] 
         self.seen_op_ids: set[str] = set()
         self.lock = asyncio.Lock()
 
-    # -- consultas -----------------------------------------------------------
     def summary(self) -> Dict[str, Any]:
         return {
             "docId": self.doc_id,
@@ -40,11 +28,6 @@ class DocState:
         }
 
     def ops_since(self, since: int) -> Dict[str, Any]:
-        """Retorna tudo que um cliente precisa para avançar de ``since`` até a cabeça.
-
-        Se ``since`` for anterior ao snapshot atual, o snapshot é incluído para
-        que o cliente possa reconstruir do zero.
-        """
         if since < self.base_version:
             return {
                 "docId": self.doc_id,
@@ -63,16 +46,9 @@ class DocState:
         }
 
     def intervening_ops(self, base_version: int) -> List[Dict[str, Any]]:
-        """Ops transformadas aplicadas após ``base_version`` (para rebaseamento)."""
         return [e["op"] for e in self.oplog if e["seq"] > base_version]
 
-    # -- mutação -------------------------------------------------------------
     def append_applied(self, entry: OpLogEntry, snapshot_every: int) -> None:
-        """Registra uma entrada de log já sequenciada e já aplicada.
-
-        Idempotente em ``seq``: entradas em ou abaixo da cabeça atual são
-        ignoradas (é isto que torna seguro reexecutar o replay da réplica e o
-        failover)."""
         if entry["seq"] <= self.seq:
             return
         self.text = apply_op(self.text, entry["op"])
@@ -85,7 +61,6 @@ class DocState:
             self.compact()
 
     def compact(self) -> None:
-        """Dobra o log no snapshot e o trunca."""
         self.snapshot_text = self.text
         self.base_version = self.seq
         self.oplog = [e for e in self.oplog if e["seq"] > self.base_version]

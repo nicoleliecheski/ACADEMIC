@@ -1,5 +1,5 @@
-Notas da reunião do projeto de sistemas distribuídos.
+Notas da reunião do projeto.
 
-a equipe vai se reunir na segunda para discutir o editor de documentos.
-precisamos testar a edição concorrente com muitos clientes e verificar a consistência.
+a equipe vai se reunir na segunda para discutir o UnifiDocs.
+precisamos testar a edição.
 o corretor ortográfico deveria marcar palavras erradas como voce, naum e menssagem.
