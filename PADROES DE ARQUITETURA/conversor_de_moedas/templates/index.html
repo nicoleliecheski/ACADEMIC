@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <title>Conversor de Moedas — MVC</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <main class="card">
+    <h1>Conversor de Moedas</h1>
+
+    <form method="post" action="/">
+      <label for="amount">Valor</label>
+      <input type="number" step="any" min="0" id="amount" name="amount"
+             value="{{ form_data.amount }}" required>
+
+      <div class="row">
+        <div>
+          <label for="from_currency">De</label>
+          <select id="from_currency" name="from_currency">
+            {% for c in currencies %}
+              <option value="{{ c }}" {% if c == form_data.from_currency %}selected{% endif %}>{{ c }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label for="to_currency">Para</label>
+          <select id="to_currency" name="to_currency">
+            {% for c in currencies %}
+              <option value="{{ c }}" {% if c == form_data.to_currency %}selected{% endif %}>{{ c }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <button type="submit">Converter</button>
+    </form>
+
+    {% if error %}
+      <p class="error">Erro: {{ error }}</p>
+    {% endif %}
+
+    {% if result is not none %}
+      <p class="result">
+        {{ form_data.amount }} {{ form_data.from_currency }} =
+        <strong>{{ result }} {{ form_data.to_currency }}</strong>
+      </p>
+    {% endif %}
+  </main>
+</body>
+</html>
