@@ -69,6 +69,6 @@ int main() {
     testTransformFilterCalculatesTotal();
     testSumFilterAggregates();
     testReportFilterFormatsOutput();
-    cout << "Todos os testes passaram." << endl;
+    cout << "todos os testes passaram" << endl;
     return 0;
 }
