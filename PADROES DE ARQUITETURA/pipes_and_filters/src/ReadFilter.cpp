@@ -8,7 +8,7 @@ using namespace std;
 vector<RawRecord> ReadFilter::process(const string& filepath) const {
     ifstream file(filepath);
     if (!file.is_open()) {
-        throw runtime_error("Nao foi possivel abrir o arquivo: " + filepath);
+        throw runtime_error("nao foi possivel abrir o arquivo: " + filepath);
     }
 
     vector<RawRecord> records;
