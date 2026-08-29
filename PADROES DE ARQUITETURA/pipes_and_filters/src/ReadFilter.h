@@ -5,9 +5,11 @@
 #include <vector>
 #include "Record.h"
 
+using namespace std;
+
 class ReadFilter {
 public:
-    std::vector<RawRecord> process(const std::string& filepath) const;
+    vector<RawRecord> process(const string& filepath) const;
 };
 
 #endif

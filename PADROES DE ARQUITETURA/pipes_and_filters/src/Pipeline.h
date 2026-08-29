@@ -8,9 +8,11 @@
 #include "SumFilter.h"
 #include "ReportFilter.h"
 
+using namespace std;
+
 class Pipeline {
 public:
-    std::string run(const std::string& filepath) const;
+    string run(const string& filepath) const;
 
 private:
     ReadFilter readFilter;

@@ -3,16 +3,18 @@
 #include <iomanip>
 #include <cmath>
 
-std::string ReportFilter::formatCurrency(double value) const {
-    long long cents = static_cast<long long>(std::llround(value * 100));
+using namespace std;
+
+string ReportFilter::formatCurrency(double value) const {
+    long long cents = static_cast<long long>(llround(value * 100));
     long long integerPart = cents / 100;
     long long decimalPart = cents % 100;
     if (decimalPart < 0) {
         decimalPart = -decimalPart;
     }
 
-    std::string integerStr = std::to_string(integerPart < 0 ? -integerPart : integerPart);
-    std::string grouped;
+    string integerStr = to_string(integerPart < 0 ? -integerPart : integerPart);
+    string grouped;
     int count = 0;
     for (int i = static_cast<int>(integerStr.size()) - 1; i >= 0; --i) {
         grouped.insert(grouped.begin(), integerStr[i]);
@@ -22,17 +24,17 @@ std::string ReportFilter::formatCurrency(double value) const {
         }
     }
 
-    std::ostringstream oss;
+    ostringstream oss;
     if (integerPart < 0) {
         oss << "-";
     }
-    oss << grouped << "," << std::setw(2) << std::setfill('0') << decimalPart;
+    oss << grouped << "," << setw(2) << setfill('0') << decimalPart;
     return oss.str();
 }
 
-std::string ReportFilter::process(const AggregationResult& input) const {
-    std::ostringstream oss;
-    const std::string separator(40, '=');
+string ReportFilter::process(const AggregationResult& input) const {
+    ostringstream oss;
+    const string separator(40, '=');
 
     oss << separator << "\n";
     oss << "        RELATORIO DE VENDAS\n";

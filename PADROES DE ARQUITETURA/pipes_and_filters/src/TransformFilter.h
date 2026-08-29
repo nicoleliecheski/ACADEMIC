@@ -4,9 +4,11 @@
 #include <vector>
 #include "Record.h"
 
+using namespace std;
+
 class TransformFilter {
 public:
-    std::vector<TransformedRecord> process(const std::vector<SaleRecord>& input) const;
+    vector<TransformedRecord> process(const vector<SaleRecord>& input) const;
 };
 
 #endif

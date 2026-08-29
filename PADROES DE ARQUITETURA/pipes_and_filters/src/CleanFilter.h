@@ -4,9 +4,11 @@
 #include <vector>
 #include "Record.h"
 
+using namespace std;
+
 class CleanFilter {
 public:
-    std::vector<SaleRecord> process(const std::vector<RawRecord>& input) const;
+    vector<SaleRecord> process(const vector<RawRecord>& input) const;
 
 private:
     bool isValid(const RawRecord& record, int& quantidade, double& preco) const;

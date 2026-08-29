@@ -1,25 +1,27 @@
 #ifndef RECORD_H
 #define RECORD_H
 
+using namespace std;
+
 #include <string>
 
 struct RawRecord {
-    std::string id_venda;
-    std::string produto;
-    std::string quantidade_str;
-    std::string preco_unitario_str;
+    string id_venda;
+    string produto;
+    string quantidade_str;
+    string preco_unitario_str;
 };
 
 struct SaleRecord {
-    std::string id_venda;
-    std::string produto;
+    string id_venda;
+    string produto;
     int quantidade;
     double preco_unitario;
 };
 
 struct TransformedRecord {
-    std::string id_venda;
-    std::string produto;
+    string id_venda;
+    string produto;
     int quantidade;
     double preco_unitario;
     double valor_total;

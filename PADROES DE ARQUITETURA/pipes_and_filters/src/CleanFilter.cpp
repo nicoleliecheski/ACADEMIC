@@ -2,9 +2,11 @@
 #include <cstdlib>
 #include <cctype>
 
+using namespace std;
+
 namespace {
 
-bool parseInt(const std::string& str, int& out) {
+bool parseInt(const string& str, int& out) {
     if (str.empty()) {
         return false;
     }
@@ -16,20 +18,20 @@ bool parseInt(const std::string& str, int& out) {
         return false;
     }
     for (; i < str.size(); ++i) {
-        if (!std::isdigit(static_cast<unsigned char>(str[i]))) {
+        if (!isdigit(static_cast<unsigned char>(str[i]))) {
             return false;
         }
     }
-    out = std::atoi(str.c_str());
+    out = atoi(str.c_str());
     return true;
 }
 
-bool parseDouble(const std::string& str, double& out) {
+bool parseDouble(const string& str, double& out) {
     if (str.empty()) {
         return false;
     }
     char* end = nullptr;
-    double value = std::strtod(str.c_str(), &end);
+    double value = strtod(str.c_str(), &end);
     if (end == str.c_str() || *end != '\0') {
         return false;
     }
@@ -55,8 +57,8 @@ bool CleanFilter::isValid(const RawRecord& record, int& quantidade, double& prec
     return true;
 }
 
-std::vector<SaleRecord> CleanFilter::process(const std::vector<RawRecord>& input) const {
-    std::vector<SaleRecord> output;
+vector<SaleRecord> CleanFilter::process(const vector<RawRecord>& input) const {
+    vector<SaleRecord> output;
 
     for (const auto& raw : input) {
         int quantidade = 0;

@@ -1,6 +1,8 @@
 #include "SumFilter.h"
 
-AggregationResult SumFilter::process(const std::vector<TransformedRecord>& input) const {
+using namespace std;
+
+AggregationResult SumFilter::process(const vector<TransformedRecord>& input) const {
     AggregationResult result;
 
     for (const auto& record : input) {

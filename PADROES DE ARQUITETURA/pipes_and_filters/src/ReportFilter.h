@@ -4,12 +4,14 @@
 #include <string>
 #include "Record.h"
 
+using namespace std;
+
 class ReportFilter {
 public:
-    std::string process(const AggregationResult& input) const;
+    string process(const AggregationResult& input) const;
 
 private:
-    std::string formatCurrency(double value) const;
+    string formatCurrency(double value) const;
 };
 
 #endif

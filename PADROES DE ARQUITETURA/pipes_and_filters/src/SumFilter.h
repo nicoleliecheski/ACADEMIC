@@ -4,9 +4,11 @@
 #include <vector>
 #include "Record.h"
 
+using namespace std;
+
 class SumFilter {
 public:
-    AggregationResult process(const std::vector<TransformedRecord>& input) const;
+    AggregationResult process(const vector<TransformedRecord>& input) const;
 };
 
 #endif
