@@ -10,14 +10,14 @@ bool parseInt(const string& str, int& out) {
     if (str.empty()) {
         return false;
     }
-    size_t i = 0;
-    if (str[0] == '-' || str[0] == '+') {
+    size_t i=0;
+    if (str[0]=='-'||str[0]=='+') {
         i = 1;
     }
-    if (i >= str.size()) {
+    if (i>=str.size()) {
         return false;
     }
-    for (; i < str.size(); ++i) {
+    for (;i<str.size();++i) {
         if (!isdigit(static_cast<unsigned char>(str[i]))) {
             return false;
         }
@@ -32,7 +32,7 @@ bool parseDouble(const string& str, double& out) {
     }
     char* end = nullptr;
     double value = strtod(str.c_str(), &end);
-    if (end == str.c_str() || *end != '\0') {
+    if (end==str.c_str()||*end!='\0') {
         return false;
     }
     out = value;
@@ -45,13 +45,13 @@ bool CleanFilter::isValid(const RawRecord& record, int& quantidade, double& prec
     if (!parseInt(record.quantidade_str, quantidade)) {
         return false;
     }
-    if (quantidade <= 0) {
+    if (quantidade<=0) {
         return false;
     }
     if (!parseDouble(record.preco_unitario_str, preco)) {
         return false;
     }
-    if (preco < 0) {
+    if (preco<0) {
         return false;
     }
     return true;
