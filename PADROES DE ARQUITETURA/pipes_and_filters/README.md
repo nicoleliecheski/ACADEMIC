@@ -1,4 +1,7 @@
 # Exercício sobre Pipes and Filters
+Aluna: Nicole Liecheski
+
+Matrícula: 202302625
 
 ## Para compilar a pipeline inteira
 ```
