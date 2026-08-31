@@ -14,6 +14,7 @@ e registra a RED-OLD(G) de cada
 #include "graphio.h"
 #include "subset.h"
 #include <iostream>
+#include <algorithm>
 #include <set>
 #include <stdio.h>
 #include <utility>
@@ -135,7 +136,22 @@ int main(int argc, char *argv[]) {
 
       // Flag pra indicar se o conjunto S atual eh RED-OLD ou nao
       int eh_RED_OLD = 1; 
+      
+      // Verificando a dominancao dupla
+      for (int i = 0; i < n; i++)
+      {
+        vector<int> res;
+        set_intersection(S.begin(), S.end(), vizinhancas[i].begin(), vizinhancas[i].end(), back_inserter(res));
+        if(res.size() < 2){
+          eh_RED_OLD = 0;
+          break;
+        }
+      }
 
+      if(eh_RED_OLD == 0){
+        continue;
+      }
+      
       // Loop passando por cada par de vertice distinto u e v do grafo
       for (auto &pp : pares_distintos) { 
         int flag_u = 0;

@@ -32,158 +32,193 @@ set<int> vizinhos(unsigned long *g, int v, int m) {
 }
 
 int main(int argc, char *argv[]) {
-  // Tem RED-LD possivel?
-  int RED_LD_possivel = 0;
-
-  // RED-LD(G) (RED-LD com cardinalidade minima)
-  int RED_LD_G = INT_MAX;
-
-
-  // Abrindo um arquivo .g6
+  // Abrindo o arquivo de entrada do tipo .g6
+  // Um arquivo so pode conter varios grafos mas todos possuem o mesmo tamanho de V(G) 
   if (argc < 2) {
-    fprintf(stderr, "Usage: %s <input.g6>\n", argv[0]);
+    fprintf(stderr, "Usando: %s <input.g6>\n", argv[0]);
     return -1;
   }
-  FILE* f = fopen(argv[1], "r");
+  FILE *f = fopen(argv[1], "r");
   if (f == NULL) {
-    fprintf(stderr, "Error: Unable to open file '%s'\n", argv[1]);
-    return -1;
-  }
-  char *s = showg_getline(f);
-  if (s == NULL) {
-    fprintf(stderr, "Error: No graph line read (empty file?)\n");
-    fclose(f);
+    fprintf(stderr, "Erro: Nao foi possivel abrir o arquivo '%s'\n", argv[1]);
     return -1;
   }
 
-  // Calcula a quantidade de vertices de G
-  int n = graphsize(s);
-  int m = graph_row_words(n);
+  // Quantidade de grafos do arquivo de entrada que possuem um conjunto RED-LD possivel
+  int Qtd_Grafos_com_RED_LD = 0;
+  
+  // Valores (tamanhos) possiveis dos conjuntos RED-LD dos grafos de entrada
+  set<int> Vlrs_Possiveis_RED_LD;
+  
+  // Tamanho de V(G)
+  int n = 0;
 
-  // Tratamento dos dados do arquivo para poderem ser manipulados
-  vector<unsigned long> g((size_t)n * m);
-  stringtograph(s, g.data(), m);
+  int m = 0;
 
   set<int> V_G;
 
-  // Gerando a vizinhanca de cada vertice
-  vector<set<int> > vizinhancas;
-  for (int i = 0; i < n; i++) {
-    V_G.insert(i); // aproveitando o loop para add os vertices em V(G)
-    set<int> vizi = vizinhos(g.data(), i, m);
-    vizinhancas.push_back(vizi);
-    cout << "N(" << i << ") = ";
-    for (auto &v : vizi){
-      cout << v << ", ";
-    }
-    cout << "\n";
-  }
-
-  // Calcula todos os subconjuntos de vertices S possíveis de G
-  set< set<int> > res = subsets(n);
+  set< set<int> > res;
   
-  // Passa por cada conjunto S
-  int ty = 1;
-  for (auto& x : res) {
-    //cout << "cheguei " << ty << endl;
-    ty++;
+  char *s;
+  // Indice do grafo atual
+  int graph_num = 0;
+  // Loop para passar por todos os grafos no arquivo .g6
+  while ((s = showg_getline(f)) != NULL){
+
+    // Otimizando: operações que só precisam ser realizadas na primeira iteração pois o n eh igual em todos os grafos
+    if(graph_num == 0){
+      n = graphsize(s); 
+      m = graph_row_words(n);
+      
+      // Gerando todos os subconjuntos S possiveis de vertices do grafo atual baseado no valor de n
+      res = subsets(n); 
+    }
+
+    // Tratamento dos dados do arquivo para poderem ser manipulados
+    vector<unsigned long> g((size_t)n * m);
+    stringtograph(s, g.data(), m);
+
+    // Gravando a vizinhanca de cada vertice do grafo atual
+    vector<set<int> > vizinhancas;
+    for (int i = 0; i < n; i++) {
+      V_G.insert(i); // aproveitando o loop para add os vertices em V(G)
+      set<int> vizi = vizinhos(g.data(), i, m);
+      vizinhancas.push_back(vizi);
+      // cout << "N(" << i << ") = ";
+      // for (auto &v : vizi){
+      //   cout << v << ", ";
+      // }
+      // cout << "\n";
+    }
+  
+    // Tem RED-LD possivel?
+    int RED_LD_possivel = 0;
+  
+    // RED-LD(G) (RED-LD com cardinalidade minima)
+    int RED_LD_G = INT_MAX;
     
-    int eh_RED_LD = 1; // Inicialmente eh true
-    
-    if(!x.empty()){
-      set<int> V_G_menos_S;
-      V_G_menos_S = V_G;
-      for(auto& v : x){
-        V_G_menos_S.erase(v);
-      }
-
-      vector<set<int> > vizinhancas_em_S(n);
-
-      for (int i = 0; i < n; i++){
-        for(auto& vizi : vizinhancas[i]){
-          if(x.find(vizi) != x.end()) vizinhancas_em_S[i].insert(vizi); 
+    // Passa por cada conjunto S
+    int ty = 1;
+    for (auto& x : res) {
+      //cout << "cheguei " << ty << endl;
+      ty++;
+      
+      int eh_RED_LD = 1; // Inicialmente eh true
+      
+        if(!x.empty()){
+        set<int> V_G_menos_S;
+        V_G_menos_S = V_G;
+        for(auto& v : x){
+          V_G_menos_S.erase(v);
         }
-      }
-
-      // 1 condicao
-      for (int i = 0; i < n; i++) {
-        int cnt = 0;
-        if(x.find(i) != x.end()) cnt++;
-        cnt += vizinhancas_em_S[i].size();
-        if(cnt < 2){
-          eh_RED_LD = 0;
-          break;
+  
+        vector<set<int> > vizinhancas_em_S(n);
+  
+        for (int i = 0; i < n; i++){
+          for(auto& vizi : vizinhancas[i]){
+            if(x.find(vizi) != x.end()) vizinhancas_em_S[i].insert(vizi); 
+          }
         }
-      }
-      //cout << "c1" << endl;
-
-      // 2 condicao
-      for(auto& v : x){
-        if(eh_RED_LD != 1) break;
-
-        for(auto& u : V_G_menos_S){
-          set<int> dif_simetrica = vizinhancas_em_S[u];
-
-          for(auto& z : vizinhancas_em_S[v]){
-            dif_simetrica.insert(z);
-          }
-
-          set<int> aux = dif_simetrica;
-
-          for(auto& z : aux){
-            if((vizinhancas_em_S[u].find(z) != vizinhancas_em_S[u].end()) && (vizinhancas_em_S[v].find(z) != vizinhancas_em_S[v].end()) && (dif_simetrica.find(z) != dif_simetrica.end())) dif_simetrica.erase(z);
-          }
-
-          if(dif_simetrica.find(v) != dif_simetrica.end()) dif_simetrica.erase(v);
-
-          if(dif_simetrica.size() < 1){
+  
+        // 1 condicao
+        for (int i = 0; i < n; i++) {
+          int cnt = 0;
+          if(x.find(i) != x.end()) cnt++;
+          cnt += vizinhancas_em_S[i].size();
+          if(cnt < 2){
             eh_RED_LD = 0;
             break;
           }
         }
-      }
-      //cout << "c2" << endl;
-
-      // 3 condicao
-      for(auto& u : V_G_menos_S){
-        if(eh_RED_LD != 1) break;
-
-        for(auto& v : V_G_menos_S){
-          if(u != v){
+        //cout << "c1" << endl;
+  
+        // 2 condicao
+        for(auto& v : x){
+          if(eh_RED_LD != 1) break;
+  
+          for(auto& u : V_G_menos_S){
             set<int> dif_simetrica = vizinhancas_em_S[u];
-
+  
             for(auto& z : vizinhancas_em_S[v]){
               dif_simetrica.insert(z);
             }
-
+  
             set<int> aux = dif_simetrica;
-
+  
             for(auto& z : aux){
               if((vizinhancas_em_S[u].find(z) != vizinhancas_em_S[u].end()) && (vizinhancas_em_S[v].find(z) != vizinhancas_em_S[v].end()) && (dif_simetrica.find(z) != dif_simetrica.end())) dif_simetrica.erase(z);
             }
-
-            if(dif_simetrica.size() < 2){
+  
+            if(dif_simetrica.find(v) != dif_simetrica.end()) dif_simetrica.erase(v);
+  
+            if(dif_simetrica.size() < 1){
               eh_RED_LD = 0;
               break;
             }
           }
         }
+        //cout << "c2" << endl;
+  
+        // 3 condicao
+        for(auto& u : V_G_menos_S){
+          if(eh_RED_LD != 1) break;
+  
+          for(auto& v : V_G_menos_S){
+            if(u != v){
+              set<int> dif_simetrica = vizinhancas_em_S[u];
+  
+              for(auto& z : vizinhancas_em_S[v]){
+                dif_simetrica.insert(z);
+              }
+  
+              set<int> aux = dif_simetrica;
+  
+              for(auto& z : aux){
+                if((vizinhancas_em_S[u].find(z) != vizinhancas_em_S[u].end()) && (vizinhancas_em_S[v].find(z) != vizinhancas_em_S[v].end()) && (dif_simetrica.find(z) != dif_simetrica.end())) dif_simetrica.erase(z);
+              }
+  
+              if(dif_simetrica.size() < 2){
+                eh_RED_LD = 0;
+                break;
+              }
+            }
+          }
+        }
+        //cout << "c3" << endl;
+  
+        if(eh_RED_LD == 0) continue; // conjunto S atual nao eh RED-LD, passa pro proximo
+        else{
+          RED_LD_possivel = 1;
+  
+          if(x.size() < RED_LD_G) RED_LD_G = x.size();
+        }
+      } else {
+        continue;
       }
-      //cout << "c3" << endl;
-
-      if(eh_RED_LD == 0) continue; // conjunto S atual nao eh RED-LD, passa pro proximo
-      else{
-        RED_LD_possivel = 1;
-
-        if(x.size() < RED_LD_G) RED_LD_G = x.size();
-      }
-    } else {
-      continue;
     }
+  
+    if(RED_LD_possivel == 1){
+      Qtd_Grafos_com_RED_LD++;
+      Vlrs_Possiveis_RED_LD.insert(RED_LD_G);
+    }
+
+    graph_num++;
   }
 
-  if(RED_LD_possivel == 1) cout << "Tem RED-LD possivel\nRED-LD(G) = " << RED_LD_G << endl;
-  else cout << "Nao tem RED-LD possivel\n" << endl;
+  if (graph_num == 0) {
+    fprintf(stderr, "Erro: Nao foi lido nenhuma linha de grafo (arquivo vazio?)\n");
+    fclose(f);
+    return -1;
+  } else {
+    cout << "Quantidade de grafos = " << graph_num << endl;
+    cout << "Quantidade de grafos com RED-LD = " << Qtd_Grafos_com_RED_LD << endl;
+
+    cout << "Valores possiveis para RED-LD(G) = ";
+    for(auto &r : Vlrs_Possiveis_RED_LD){
+      cout << r << " ";
+    }
+    cout << "\n";
+  }
 
   fclose(f);
   return 0;
